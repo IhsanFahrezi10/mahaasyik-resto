@@ -91,12 +91,16 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
 
       <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50 print:hidden">
         <div className="max-w-md mx-auto flex flex-col gap-2.5">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} className="w-full bg-white text-gray-800 p-3.5 rounded-xl font-medium text-sm border border-gray-200 shadow-sm">
-            Cetak Struk
-          </motion.button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={handleTambahPesanan} className="w-2/3 bg-white text-amber-600 border border-amber-200 p-3.5 rounded-xl font-medium text-sm shadow-sm">
-            + Pesan Menu Lain
-          </motion.button>
+          <div className="flex gap-2">
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} className="w-1/3 bg-white text-gray-800 p-3.5 rounded-xl font-medium text-sm border border-gray-200 shadow-sm">
+              Cetak Struk
+            </motion.button>
+
+            {/* 👇 Ini tombol baru buat nambah pesanan */}
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleTambahPesanan} className="w-2/3 bg-white text-amber-600 border border-amber-200 p-3.5 rounded-xl font-medium text-sm shadow-sm">
+              + Pesan Menu Lain
+            </motion.button>
+          </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleSelesaiKeluar}
