@@ -17,7 +17,7 @@ export default function CheckoutView({
   emailPelanggan,
   setEmailPelanggan,
   setOrderData,
-  setStrukItems,
+  setStrukItems, // <--- Tadi error karena ini nggak ada di sini
   setTotalStruk,
   setTeksMetodeBayarStruk,
   // Kita buang metodeBayar bawaan lu, karena Midtrans yg ngurus ini sekarang

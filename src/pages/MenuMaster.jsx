@@ -16,8 +16,8 @@ const MenuMaster = () => {
   const [filterUtama, setFilterUtama] = useState("Semua");
   const [filterOlahan, setFilterOlahan] = useState("Semua");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
-  const STORAGE_URL = "http://127.0.0.1:8000/storage"; // URL untuk akses foto dari backend
+  const API_URL = import.meta.env.VITE_API_URL || "https://wife-monsieur-gratuity.ngrok-free.dev/api";
+  const STORAGE_URL = "https://wife-monsieur-gratuity.ngrok-free.dev"; // URL untuk akses foto dari backend
 
   const [formData, setFormData] = useState({
     id: null,

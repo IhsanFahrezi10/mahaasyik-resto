@@ -227,7 +227,7 @@ export default function MenuPelanggan() {
       const response = await axios.get(`${API_URL}/check-meja/${inputMeja}`);
       if (response.data.status === "available") {
         try {
-          await axios.post(`${API_URL}/meja/occupy`, { nomor_meja: inputMeja });
+          await axios.post(`${BACKEND_URL}/api/meja/occupy`, { nomor_meja: inputMeja });
         } catch (err) {
           console.log("Gagal update meja", err);
         }
@@ -393,9 +393,6 @@ export default function MenuPelanggan() {
             setIsTimerAktif={setIsTimerAktif}
             setShowPaymentModal={setShowPaymentModal}
             setOrderData={setOrderData}
-            setStrukItems={setStrukItems}
-            setTotalStruk={setTotalStruk}
-            setTeksMetodeBayarStruk={setTeksMetodeBayarStruk}
           />
         )}
 
