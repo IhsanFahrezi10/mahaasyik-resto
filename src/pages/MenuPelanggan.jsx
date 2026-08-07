@@ -392,6 +392,10 @@ export default function MenuPelanggan() {
             setWaktuBayar={setWaktuBayar}
             setIsTimerAktif={setIsTimerAktif}
             setShowPaymentModal={setShowPaymentModal}
+            setOrderData={setOrderData}
+            setStrukItems={setStrukItems}
+            setTotalStruk={setTotalStruk}
+            setTeksMetodeBayarStruk={setTeksMetodeBayarStruk}
           />
         )}
 

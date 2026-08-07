@@ -16,6 +16,10 @@ export default function CheckoutView({
   setNoHpPelanggan,
   emailPelanggan,
   setEmailPelanggan,
+  setOrderData,
+  setStrukItems,
+  setTotalStruk,
+  setTeksMetodeBayarStruk,
   // Kita buang metodeBayar bawaan lu, karena Midtrans yg ngurus ini sekarang
 }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
@@ -52,6 +56,10 @@ export default function CheckoutView({
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
 
       if (response.data.success) {
+        if (typeof setOrderData === "function") setOrderData(response.data.data);
+        if (typeof setStrukItems === "function") setStrukItems(cart);
+        if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
+        if (typeof setTeksMetodeBayarStruk === "function") setTeksMetodeBayarStruk("Midtrans (QRIS / VA)");
         const snapToken = response.data.snap_token;
 
         // 3. Panggil Popup Midtrans pake token dari backend
