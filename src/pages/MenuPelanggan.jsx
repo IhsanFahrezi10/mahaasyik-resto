@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../components/HeaderLogo";
 axios.defaults.headers.common["ngrok-skip-browser-warning"] = "69420";
+
 // Import komponen pecahan
 import MenuView from "../components/MenuPelanggan/MenuView";
 import CheckoutView from "../components/MenuPelanggan/CheckoutView";
@@ -21,7 +22,8 @@ export default function MenuPelanggan() {
   const [emailPelanggan, setEmailPelanggan] = useState("");
   const [noHpPelanggan, setNoHpPelanggan] = useState("");
 
-  const [nomorMeja, setNomorMeja] = useState(() => mejaUrl || localStorage.getItem("mahaasyik_nomor_meja") || "");
+  // 1. Inisialisasi nomorMeja cuma dari localStorage, mejaUrl dihandle useEffect
+  const [nomorMeja, setNomorMeja] = useState(() => localStorage.getItem("mahaasyik_nomor_meja") || "");
   const [inputMeja, setInputMeja] = useState("");
   const [errorMeja, setErrorMeja] = useState("");
   const [isLoadingMeja, setIsLoadingMeja] = useState(false);
@@ -215,42 +217,36 @@ export default function MenuPelanggan() {
     }
   };
 
-  // 🔥 INI FUNGSI YANG DIROMBAK BUAT FITUR "DEVICE TOKEN"
-  const handleMasukMeja = async (e) => {
-    e.preventDefault();
-    if (!inputMeja) return;
+  // 2. Abstraksi logika pengecekan meja biar bisa dipanggil dari QR atau input manual
+  const prosesMasukMeja = async (targetMeja) => {
     setErrorMeja("");
     setIsLoadingMeja(true);
 
-    // 1. Setup Device ID unik untuk HP ini
     let deviceId = localStorage.getItem("mahaasyik_device_id");
     if (!deviceId) {
-      // Bikin string random (contoh: x9f2j8...18b2c...)
       deviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
       localStorage.setItem("mahaasyik_device_id", deviceId);
     }
 
     try {
-      const response = await axios.get(`${API_URL}/check-meja/${inputMeja}`);
+      const response = await axios.get(`${API_URL}/check-meja/${targetMeja}`);
 
       if (response.data.status === "available") {
         try {
-          // 2. Kirim Device ID ke backend biar dikunci ke meja ini
           await axios.post(`${BACKEND_URL}/api/meja/occupy`, {
-            nomor_meja: inputMeja,
-            device_id: deviceId, // Payload baru buat ngunci meja
+            nomor_meja: targetMeja,
+            device_id: deviceId,
           });
         } catch (err) {
           console.log("Gagal update meja", err);
         }
-        localStorage.setItem("mahaasyik_nomor_meja", inputMeja);
-        setNomorMeja(inputMeja);
+        localStorage.setItem("mahaasyik_nomor_meja", targetMeja);
+        setNomorMeja(targetMeja);
         setView("menu");
       } else if (response.data.status === "active") {
-        // 3. Validasi Device ID (Gembok Perangkat)
         const tableDeviceId = response.data.device_id;
 
-        // Kalau meja ada kuncinya & kuncinya BUKAN milik HP ini -> TENDANG!
+        // Validasi Token Gembok
         if (tableDeviceId && tableDeviceId !== deviceId) {
           Swal.fire({
             title: "Akses Ditolak!",
@@ -259,26 +255,38 @@ export default function MenuPelanggan() {
             confirmButtonColor: "#D30F25",
           });
           setIsLoadingMeja(false);
-          return; // Hentikan proses, jangan kasih masuk
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
         }
 
-        // Kalau kuncinya SAMA, izinkan masuk (pulihkan sesi)
         Swal.fire({ title: "Sesi Dipulihkan", text: "Meja ini masih aktif...", icon: "info", timer: 2500, showConfirmButton: false });
 
         const dataOrderDariBackend = response.data.order;
+
+        // Pengecekan ekstra: Kalo meja terisi tapi orderan blm dibikin (baru lihat menu)
+        if (!dataOrderDariBackend) {
+          localStorage.setItem("mahaasyik_nomor_meja", targetMeja);
+          setNomorMeja(targetMeja);
+          setView("menu");
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
+        }
+
         const backendItems = Array.isArray(dataOrderDariBackend?.items) ? dataOrderDariBackend.items : [];
         const restoredCart = backendItems.map((item) => {
           const hargaValid = Number(item.menu?.price) || Number(item.subtotal) / Number(item.jumlah || 1) || 0;
           return { id: item.menu_id, name: item.menu?.name || item.menu?.nama_menu || `Menu #${item.menu_id}`, qty: Number(item.jumlah) || 1, price: hargaValid, catatan: item.catatan || "" };
         });
+
         const activeOrder = { ...dataOrderDariBackend, status: dataOrderDariBackend?.status_pesanan || "Menunggu", metode_pembayaran: dataOrderDariBackend?.metode_pembayaran || "qris", items: restoredCart };
 
         setOrderData(activeOrder);
         setCart(restoredCart);
         localStorage.setItem("mahaasyik_active_order", JSON.stringify(activeOrder));
-        localStorage.setItem("mahaasyik_nomor_meja", inputMeja);
         localStorage.setItem("mahaasyik_active_cart", JSON.stringify(restoredCart));
-        setNomorMeja(inputMeja);
+        localStorage.setItem("mahaasyik_nomor_meja", targetMeja);
+
+        setNomorMeja(targetMeja);
         setView("progress");
       }
     } catch (error) {
@@ -286,8 +294,22 @@ export default function MenuPelanggan() {
       else setErrorMeja("Gagal terhubung ke server.");
     } finally {
       setIsLoadingMeja(false);
+      window.history.replaceState(null, "", window.location.pathname);
     }
   };
+
+  // 3. Fungsi submit form input manual
+  const handleMasukMeja = (e) => {
+    e.preventDefault();
+    if (inputMeja) prosesMasukMeja(inputMeja);
+  };
+
+  // 4. Auto-trigger kalo masuk lewat Scan QR Code (?meja=...)
+  useEffect(() => {
+    if (mejaUrl && !nomorMeja) {
+      prosesMasukMeja(mejaUrl);
+    }
+  }, [mejaUrl, nomorMeja]);
 
   const handleTambahPesanan = () => {
     setCart([]);
