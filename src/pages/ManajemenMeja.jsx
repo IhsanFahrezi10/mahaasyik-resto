@@ -19,7 +19,7 @@ const ManajemenMeja = () => {
 
   // API_URL udah nggak kepake buat request karena udah di-handle api.js
   // Tapi APP_URL tetap kita biarin buat generate link QR Code
-  const APP_URL = import.meta.env.VITE_APP_URL || "http://localhost:5173";
+  const APP_URL = "mahaasyik-resto-one.vercel.app";
 
   const fetchTablesAndSyncStatus = async () => {
     setIsLoading(true);
