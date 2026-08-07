@@ -22,7 +22,6 @@ export default function MenuPelanggan() {
   const [emailPelanggan, setEmailPelanggan] = useState("");
   const [noHpPelanggan, setNoHpPelanggan] = useState("");
 
-  // 1. Inisialisasi nomorMeja cuma dari localStorage, mejaUrl dihandle useEffect
   const [nomorMeja, setNomorMeja] = useState(() => localStorage.getItem("mahaasyik_nomor_meja") || "");
   const [inputMeja, setInputMeja] = useState("");
   const [errorMeja, setErrorMeja] = useState("");
@@ -217,16 +216,10 @@ export default function MenuPelanggan() {
     }
   };
 
-  // 2. Abstraksi logika pengecekan meja biar bisa dipanggil dari QR atau input manual
+  // 🔥 Fungsi dikembalikan seperti semula, tanpa ngirim deviceId ke backend
   const prosesMasukMeja = async (targetMeja) => {
     setErrorMeja("");
     setIsLoadingMeja(true);
-
-    let deviceId = localStorage.getItem("mahaasyik_device_id");
-    if (!deviceId) {
-      deviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
-      localStorage.setItem("mahaasyik_device_id", deviceId);
-    }
 
     try {
       const response = await axios.get(`${API_URL}/check-meja/${targetMeja}`);
@@ -235,7 +228,7 @@ export default function MenuPelanggan() {
         try {
           await axios.post(`${BACKEND_URL}/api/meja/occupy`, {
             nomor_meja: targetMeja,
-            device_id: deviceId,
+            // device_id DIHAPUS
           });
         } catch (err) {
           console.log("Gagal update meja", err);
@@ -244,26 +237,12 @@ export default function MenuPelanggan() {
         setNomorMeja(targetMeja);
         setView("menu");
       } else if (response.data.status === "active") {
-        const tableDeviceId = response.data.device_id;
-
-        // Validasi Token Gembok
-        if (tableDeviceId && tableDeviceId !== deviceId) {
-          Swal.fire({
-            title: "Akses Ditolak!",
-            text: "Meja ini sedang digunakan oleh pelanggan lain.",
-            icon: "error",
-            confirmButtonColor: "#D30F25",
-          });
-          setIsLoadingMeja(false);
-          window.history.replaceState(null, "", window.location.pathname);
-          return;
-        }
-
+        // Pengecekan Device ID (Gembok) dihapus total.
+        // Langsung pulihkan sesi siapa saja yang masuk!
         Swal.fire({ title: "Sesi Dipulihkan", text: "Meja ini masih aktif...", icon: "info", timer: 2500, showConfirmButton: false });
 
         const dataOrderDariBackend = response.data.order;
 
-        // Pengecekan ekstra: Kalo meja terisi tapi orderan blm dibikin (baru lihat menu)
         if (!dataOrderDariBackend) {
           localStorage.setItem("mahaasyik_nomor_meja", targetMeja);
           setNomorMeja(targetMeja);
@@ -298,13 +277,11 @@ export default function MenuPelanggan() {
     }
   };
 
-  // 3. Fungsi submit form input manual
   const handleMasukMeja = (e) => {
     e.preventDefault();
     if (inputMeja) prosesMasukMeja(inputMeja);
   };
 
-  // 4. Auto-trigger kalo masuk lewat Scan QR Code (?meja=...)
   useEffect(() => {
     if (mejaUrl && !nomorMeja) {
       prosesMasukMeja(mejaUrl);
@@ -328,24 +305,12 @@ export default function MenuPelanggan() {
       confirmButtonText: "Ya, Keluar",
       cancelButtonText: "Batal",
       reverseButtons: true,
-    }).then(async (result) => {
+    }).then((result) => {
       if (result.isConfirmed) {
-        // 🔥 1. SURUH BACKEND BUKA GEMBOK MEJA DULU!
-        try {
-          await axios.post(`${BACKEND_URL}/api/meja/release`, {
-            nomor_meja: nomorMeja,
-          });
-        } catch (err) {
-          console.log("Gagal membuka gembok meja di backend", err);
-        }
-
-        // 2. BARU BERSIHKAN DATA DI HP PELANGGAN
         localStorage.removeItem("mahaasyik_nomor_meja");
         localStorage.removeItem("mahaasyik_last_view");
         localStorage.removeItem("mahaasyik_active_order");
         localStorage.removeItem("mahaasyik_active_cart");
-        // Kita biarin mahaasyik_device_id tetep ada, nggak usah dihapus
-
         window.history.replaceState(null, "", window.location.pathname);
         setNomorMeja("");
         setView("menu");
@@ -363,6 +328,7 @@ export default function MenuPelanggan() {
       }
     });
   };
+
   if (!nomorMeja) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-['Plus_Jakarta_Sans'] text-gray-800">
