@@ -2,7 +2,7 @@ import axios from "axios";
 
 // 1. Setup dasar URL backend lu
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://wife-monsieur-gratuity.ngrok-free.dev/api",
 });
 
 // 2. REQUEST INTERCEPTOR (Otomatis masukin token)
