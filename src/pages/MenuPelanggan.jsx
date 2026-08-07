@@ -130,7 +130,6 @@ export default function MenuPelanggan() {
     });
   };
 
-  // TAMBAHAN: Fungsi handleKurang yang sebelumnya terlewat
   const handleKurang = (menuId) => {
     setCart((prev) => {
       const exist = prev.find((i) => (i.id || i.menu_id) === menuId);
@@ -216,17 +215,31 @@ export default function MenuPelanggan() {
     }
   };
 
+  // 🔥 INI FUNGSI YANG DIROMBAK BUAT FITUR "DEVICE TOKEN"
   const handleMasukMeja = async (e) => {
     e.preventDefault();
     if (!inputMeja) return;
     setErrorMeja("");
     setIsLoadingMeja(true);
 
+    // 1. Setup Device ID unik untuk HP ini
+    let deviceId = localStorage.getItem("mahaasyik_device_id");
+    if (!deviceId) {
+      // Bikin string random (contoh: x9f2j8...18b2c...)
+      deviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      localStorage.setItem("mahaasyik_device_id", deviceId);
+    }
+
     try {
       const response = await axios.get(`${API_URL}/check-meja/${inputMeja}`);
+
       if (response.data.status === "available") {
         try {
-          await axios.post(`${BACKEND_URL}/api/meja/occupy`, { nomor_meja: inputMeja });
+          // 2. Kirim Device ID ke backend biar dikunci ke meja ini
+          await axios.post(`${BACKEND_URL}/api/meja/occupy`, {
+            nomor_meja: inputMeja,
+            device_id: deviceId, // Payload baru buat ngunci meja
+          });
         } catch (err) {
           console.log("Gagal update meja", err);
         }
@@ -234,7 +247,24 @@ export default function MenuPelanggan() {
         setNomorMeja(inputMeja);
         setView("menu");
       } else if (response.data.status === "active") {
+        // 3. Validasi Device ID (Gembok Perangkat)
+        const tableDeviceId = response.data.device_id;
+
+        // Kalau meja ada kuncinya & kuncinya BUKAN milik HP ini -> TENDANG!
+        if (tableDeviceId && tableDeviceId !== deviceId) {
+          Swal.fire({
+            title: "Akses Ditolak!",
+            text: "Meja ini sedang digunakan oleh pelanggan lain.",
+            icon: "error",
+            confirmButtonColor: "#D30F25",
+          });
+          setIsLoadingMeja(false);
+          return; // Hentikan proses, jangan kasih masuk
+        }
+
+        // Kalau kuncinya SAMA, izinkan masuk (pulihkan sesi)
         Swal.fire({ title: "Sesi Dipulihkan", text: "Meja ini masih aktif...", icon: "info", timer: 2500, showConfirmButton: false });
+
         const dataOrderDariBackend = response.data.order;
         const backendItems = Array.isArray(dataOrderDariBackend?.items) ? dataOrderDariBackend.items : [];
         const restoredCart = backendItems.map((item) => {
@@ -242,6 +272,7 @@ export default function MenuPelanggan() {
           return { id: item.menu_id, name: item.menu?.name || item.menu?.nama_menu || `Menu #${item.menu_id}`, qty: Number(item.jumlah) || 1, price: hargaValid, catatan: item.catatan || "" };
         });
         const activeOrder = { ...dataOrderDariBackend, status: dataOrderDariBackend?.status_pesanan || "Menunggu", metode_pembayaran: dataOrderDariBackend?.metode_pembayaran || "qris", items: restoredCart };
+
         setOrderData(activeOrder);
         setCart(restoredCart);
         localStorage.setItem("mahaasyik_active_order", JSON.stringify(activeOrder));
@@ -258,17 +289,10 @@ export default function MenuPelanggan() {
     }
   };
 
-  // Taruh fungsi ini di atas handleSelesaiKeluar
   const handleTambahPesanan = () => {
-    // 1. Kosongkan keranjang biar pelanggan bisa milih dari awal
     setCart([]);
     localStorage.removeItem("mahaasyik_active_cart");
-    
-    // 2. Balikin ke halaman menu
     setView("menu");
-
-    // Catatan: orderData sengaja NGGAK dihapus, biar tombol melayang 
-    // "Cek Pesanan" tetep muncul kalau dia cuma mau lihat-lihat menu.
   };
 
   const handleSelesaiKeluar = () => {
