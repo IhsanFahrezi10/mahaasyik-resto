@@ -12,9 +12,6 @@ import ProgressView from "../components/MenuPelanggan/ProgressView";
 import PaymentModal from "../components/MenuPelanggan/PaymentModal";
 
 export default function MenuPelanggan() {
-  const API_URL = import.meta.env.VITE_API_URL || "https://wife-monsieur-gratuity.ngrok-free.dev/api";
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://wife-monsieur-gratuity.ngrok-free.dev";
-
   const [searchParams] = useSearchParams();
   const mejaUrl = searchParams.get("meja");
 
