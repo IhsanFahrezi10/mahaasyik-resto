@@ -33,29 +33,47 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
           </div>
         </div>
 
-        <div className="mb-8 print:hidden relative px-4 mt-2">
-          <div className="absolute left-0 top-3 w-full h-1 bg-gray-100 rounded-full z-0"></div>
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: statusStep === 1 ? "0%" : statusStep === 2 ? "50%" : "100%" }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="absolute left-0 top-3 h-1 bg-[#D30F25] z-0 rounded-full"
-          ></motion.div>
-          <div className="flex items-center justify-between relative z-10">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex flex-col items-center">
-                <motion.div
-                  animate={{ scale: statusStep === step ? [1, 1.2, 1] : 1 }}
-                  transition={{ repeat: statusStep === step && step !== 3 ? Infinity : 0, duration: 1.5 }}
-                  className={`w-7 h-7 rounded-full flex items-center justify-center font-medium text-xs shadow-sm transition-colors duration-500 ${statusStep >= step ? "bg-[#D30F25] text-white" : "bg-white border border-gray-200 text-gray-400"}`}
-                >
-                  {step}
-                </motion.div>
-                <span className={`text-[10px] mt-2 transition-colors duration-500 ${statusStep >= step ? "text-[#D30F25] font-medium" : "text-gray-400 font-light"}`}>{step === 1 ? "Diterima" : step === 2 ? "Dimasak" : "Selesai"}</span>
-              </div>
-            ))}
+        {orderData.status === "Dibatalkan" ? (
+          <div className="mb-8 print:hidden bg-red-50 border border-red-200 p-5 rounded-2xl text-center">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </div>
+            <h3 className="text-red-600 font-bold text-lg mb-1">Pesanan Dibatalkan</h3>
+            <p className="text-red-500 text-xs leading-relaxed">
+              Mohon maaf, pesanan ini dibatalkan oleh kasir (kemungkinan stok habis).
+              <br />
+              <br />
+              <span className="font-semibold">Silakan temui kasir untuk pengembalian dana (refund).</span>
+            </p>
           </div>
-        </div>
+        ) : (
+          /* JIKA STATUS NORMAL (PROGRESS BAR LAMA) */
+          <div className="mb-8 print:hidden relative px-4 mt-2">
+            <div className="absolute left-0 top-3 w-full h-1 bg-gray-100 rounded-full z-0"></div>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: statusStep === 1 ? "0%" : statusStep === 2 ? "50%" : "100%" }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+              className="absolute left-0 top-3 h-1 bg-[#D30F25] z-0 rounded-full"
+            ></motion.div>
+            <div className="flex items-center justify-between relative z-10">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex flex-col items-center">
+                  <motion.div
+                    animate={{ scale: statusStep === step ? [1, 1.2, 1] : 1 }}
+                    transition={{ repeat: statusStep === step && step !== 3 ? Infinity : 0, duration: 1.5 }}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center font-medium text-xs shadow-sm transition-colors duration-500 ${statusStep >= step ? "bg-[#D30F25] text-white" : "bg-white border border-gray-200 text-gray-400"}`}
+                  >
+                    {step}
+                  </motion.div>
+                  <span className={`text-[10px] mt-2 transition-colors duration-500 ${statusStep >= step ? "text-[#D30F25] font-medium" : "text-gray-400 font-light"}`}>{step === 1 ? "Diterima" : step === 2 ? "Dimasak" : "Selesai"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-gray-100 pt-5 mb-5 print:border-t-0 print:pt-2">
           <table className="w-full text-sm text-gray-800">
