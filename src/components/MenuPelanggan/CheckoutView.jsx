@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
+import axios from "axios"; // Pastikan axios udah di-import
 
 export default function CheckoutView({
   setView,
@@ -15,13 +16,72 @@ export default function CheckoutView({
   setNoHpPelanggan,
   emailPelanggan,
   setEmailPelanggan,
-  metodeBayar,
-  setMetodeBayar,
-  setWaktuBayar,
-  setIsTimerAktif,
-  setShowPaymentModal,
+  // Kita buang metodeBayar bawaan lu, karena Midtrans yg ngurus ini sekarang
 }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
+
+  // State loading biar tombolnya nggak bisa di-spam
+  const [isLoading, setIsLoading] = useState(false);
+
+  // INI DIA FUNGSI SAKTI BUAT NAIK TAYANG KE MIDTRANS
+  const handleBayarSekarang = async () => {
+    // Validasi sederhana
+    if (!namaPelanggan) {
+      alert("Woi, isi nama pemesan dulu ngab!");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Susun data pesanan dari keranjang lu
+      const dataPesanan = {
+        nomor_meja: nomorMeja,
+        nama_pelanggan: namaPelanggan,
+        no_hp_pelanggan: noHpPelanggan,
+        email_pelanggan: emailPelanggan,
+        // Mapping cart jadi array of items
+        items: cart.map((item) => ({
+          menu_id: item.id || item.menu_id,
+          jumlah: item.qty || 1,
+          // Catatan lu sementara nggak dimasukin sini, kecuali backend lu udah ada kolomnya
+        })),
+      };
+
+      // 2. Tembak API ke Laravel
+      const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
+
+      if (response.data.success) {
+        const snapToken = response.data.snap_token;
+
+        // 3. Panggil Popup Midtrans pake token dari backend
+        window.snap.pay(snapToken, {
+          onSuccess: function (result) {
+            alert("Mantap! Pembayaran berhasil cuy!");
+
+            // GANTI BAGIAN INI:
+            // Sesuaikan "progress" dengan nama state yang biasa lu pake buat manggil ProgressView.jsx
+            setView("progress");
+          },
+          onPending: function (result) {
+            alert("Menunggu pembayaran (bisa cek di email atau dashboard)");
+            setView("menu");
+          },
+          onError: function (result) {
+            alert("Yah, pembayaran gagal!");
+          },
+          onClose: function () {
+            alert("Selesaikan pembayaran untuk memproses pesanan ya!");
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Gagal buat pesanan:", error);
+      alert("Waduh, server lagi ngambek. Coba lagi bentar ya.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ duration: 0.3 }} className="p-4 print:hidden max-w-md mx-auto min-h-screen pb-28">
@@ -35,6 +95,7 @@ export default function CheckoutView({
         <h2 className="text-lg font-semibold text-gray-900 border-l border-gray-300 pl-3">Checkout</h2>
       </div>
 
+      {/* Bagian Ringkasan Pesanan */}
       <motion.div layout className="bg-white p-5 rounded-2xl border border-gray-100 mb-6 shadow-sm">
         <div className="flex justify-between border-b border-gray-100 pb-3 mb-4">
           <span className="font-light text-gray-500 text-sm">Nomor Meja</span>
@@ -78,6 +139,7 @@ export default function CheckoutView({
         </div>
       </motion.div>
 
+      {/* Form Data Pelanggan */}
       <div className="mb-5 flex flex-col gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -114,40 +176,20 @@ export default function CheckoutView({
         </div>
       </div>
 
-      <div className="mb-6">
-        <h3 className="font-medium text-gray-800 mb-3 text-sm px-1">Metode Pembayaran</h3>
-        <div className="space-y-3">
-          {["qris", "va"].map((method) => (
-            <motion.label
-              key={method}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-colors ${metodeBayar === method ? "border-[#D30F25] bg-red-50/30" : "border-gray-200 bg-white"}`}
-            >
-              <div className="flex gap-3 items-center">
-                <input type="radio" name="payment" value={method} onChange={() => setMetodeBayar(method)} checked={metodeBayar === method} className="w-4 h-4 accent-[#D30F25]" />
-                <span className="font-medium text-gray-800 text-sm">{method === "qris" ? "QRIS (e-Wallet)" : "Virtual Account (BCA)"}</span>
-              </div>
-              {method === "qris" && <img src="https://upload.wikimedia.org/wikipedia/commons/a/a2/Logo_QRIS.svg" alt="QRIS" className="h-4" />}
-            </motion.label>
-          ))}
-        </div>
+      {/* Tombol Metode Pembayaran manual di-hide, karena Midtrans yg sediain */}
+      <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+        <p className="text-sm text-amber-800 font-medium">Pembayaran diurus oleh Midtrans.</p>
+        <p className="text-xs text-amber-600 mt-1">Kamu bisa milih QRIS, Virtual Account, atau E-Wallet di halaman selanjutnya.</p>
       </div>
 
       <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-30">
         <motion.button
-          whileTap={{ scale: metodeBayar ? 0.95 : 1 }}
-          onClick={() => {
-            if (!metodeBayar) alert("Pilih pembayaran!");
-            else {
-              setWaktuBayar(180);
-              setIsTimerAktif(true);
-              setShowPaymentModal(true);
-            }
-          }}
-          disabled={!metodeBayar}
-          className={`w-full max-w-md mx-auto p-3.5 rounded-xl font-medium text-sm flex justify-center items-center transition-all ${metodeBayar ? "bg-gradient-to-r from-[#D30F25] to-[#FFEC01] text-white shadow-md active:opacity-90" : "bg-gray-200 text-gray-400"}`}
+          whileTap={namaPelanggan && !isLoading ? { scale: 0.95 } : {}}
+          onClick={handleBayarSekarang}
+          disabled={!namaPelanggan || isLoading}
+          className={`w-full max-w-md mx-auto p-3.5 rounded-xl font-medium text-sm flex justify-center items-center transition-all ${namaPelanggan && !isLoading ? "bg-gradient-to-r from-[#D30F25] to-[#FFEC01] text-white shadow-md active:opacity-90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
         >
-          Lanjutkan Pembayaran
+          {isLoading ? "Memproses..." : "Lanjutkan Pembayaran"}
         </motion.button>
       </motion.div>
     </motion.div>
