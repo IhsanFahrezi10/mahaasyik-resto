@@ -4,14 +4,12 @@ import Swal from "sweetalert2";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../components/HeaderLogo";
-
+axios.defaults.headers.common["ngrok-skip-browser-warning"] = "69420";
 // Import komponen pecahan
 import MenuView from "../components/MenuPelanggan/MenuView";
 import CheckoutView from "../components/MenuPelanggan/CheckoutView";
 import ProgressView from "../components/MenuPelanggan/ProgressView";
 import PaymentModal from "../components/MenuPelanggan/PaymentModal";
-
-axios.defaults.headers.common['ngrok-skip-browser-warning'] = '69420';
 
 export default function MenuPelanggan() {
   const API_URL = import.meta.env.VITE_API_URL || "https://wife-monsieur-gratuity.ngrok-free.dev/api";
