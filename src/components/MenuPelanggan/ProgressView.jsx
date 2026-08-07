@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
 
-export default function ProgressView({ orderData, namaPelanggan, formatTanggal, teksMetodeBayarStruk, nomorMeja, statusStep, strukItems, totalStruk, handleSelesaiKeluar }) {
+export default function ProgressView({ orderData, namaPelanggan, formatTanggal, teksMetodeBayarStruk, nomorMeja, statusStep, strukItems, totalStruk, handleSelesaiKeluar, handleTambahPesanan }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
 
   return (
@@ -93,6 +93,9 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
         <div className="max-w-md mx-auto flex flex-col gap-2.5">
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} className="w-full bg-white text-gray-800 p-3.5 rounded-xl font-medium text-sm border border-gray-200 shadow-sm">
             Cetak Struk
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleTambahPesanan} className="w-2/3 bg-white text-amber-600 border border-amber-200 p-3.5 rounded-xl font-medium text-sm shadow-sm">
+            + Pesan Menu Lain
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}

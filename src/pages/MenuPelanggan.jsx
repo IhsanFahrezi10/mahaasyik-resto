@@ -258,6 +258,19 @@ export default function MenuPelanggan() {
     }
   };
 
+  // Taruh fungsi ini di atas handleSelesaiKeluar
+  const handleTambahPesanan = () => {
+    // 1. Kosongkan keranjang biar pelanggan bisa milih dari awal
+    setCart([]);
+    localStorage.removeItem("mahaasyik_active_cart");
+    
+    // 2. Balikin ke halaman menu
+    setView("menu");
+
+    // Catatan: orderData sengaja NGGAK dihapus, biar tombol melayang 
+    // "Cek Pesanan" tetep muncul kalau dia cuma mau lihat-lihat menu.
+  };
+
   const handleSelesaiKeluar = () => {
     Swal.fire({
       title: "Selesai & Keluar?",
@@ -407,6 +420,7 @@ export default function MenuPelanggan() {
             strukItems={strukItems}
             totalStruk={totalStruk}
             handleSelesaiKeluar={handleSelesaiKeluar}
+            handleTambahPesanan={handleTambahPesanan}
           />
         )}
       </AnimatePresence>
