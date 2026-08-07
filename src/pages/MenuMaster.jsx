@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../utils/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, Utensils, QrCode, LogOut, Bell, Search, Plus, Edit, Trash2, X, Image as ImageIcon, Filter, CheckCircle2, XCircle, Upload } from "lucide-react";
@@ -39,7 +39,7 @@ const MenuMaster = () => {
   const fetchMenus = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/menus`);
+      const response = await api.get("/menus");
       const menuData = response.data?.data || response.data;
       setMenus(menuData);
     } catch (error) {
@@ -123,11 +123,11 @@ const MenuMaster = () => {
       const headers = { "Content-Type": "multipart/form-data" };
 
       if (modalMode === "add") {
-        await axios.post(`${API_URL}/menus`, payload, { headers });
+        await api.post("/menus", payload, { headers });
       } else {
         // TRIK LARAVEL: Method spoofing untuk update pakai FormData
         payload.append("_method", "PUT");
-        await axios.post(`${API_URL}/menus/${formData.id}`, payload, { headers });
+        await api.post(`/menus/${formData.id}`, payload, { headers });
       }
 
       setIsModalOpen(false);
@@ -141,7 +141,7 @@ const MenuMaster = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Yakin mau hapus menu ini?")) {
       try {
-        await axios.delete(`${API_URL}/menus/${id}`);
+        await api.delete(`/menus/${id}`);
         fetchMenus();
       } catch (error) {
         console.error("Gagal menghapus", error);
