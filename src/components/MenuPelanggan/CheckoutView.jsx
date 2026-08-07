@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
-import axios from "axios"; // Pastikan axios udah di-import
+import axios from "axios";
 
 export default function CheckoutView({
   setView,
@@ -17,19 +17,15 @@ export default function CheckoutView({
   emailPelanggan,
   setEmailPelanggan,
   setOrderData,
-  setStrukItems, // <--- Tadi error karena ini nggak ada di sini
+  setStrukItems,
   setTotalStruk,
   setTeksMetodeBayarStruk,
-  // Kita buang metodeBayar bawaan lu, karena Midtrans yg ngurus ini sekarang
 }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
 
-  // State loading biar tombolnya nggak bisa di-spam
   const [isLoading, setIsLoading] = useState(false);
 
-  // INI DIA FUNGSI SAKTI BUAT NAIK TAYANG KE MIDTRANS
   const handleBayarSekarang = async () => {
-    // Validasi sederhana
     if (!namaPelanggan) {
       alert("Woi, isi nama pemesan dulu ngab!");
       return;
@@ -38,50 +34,47 @@ export default function CheckoutView({
     setIsLoading(true);
 
     try {
-      // 1. Susun data pesanan dari keranjang lu
       const dataPesanan = {
         nomor_meja: nomorMeja,
         nama_pelanggan: namaPelanggan,
         no_hp_pelanggan: noHpPelanggan,
         email_pelanggan: emailPelanggan,
-        // Mapping cart jadi array of items
         items: cart.map((item) => ({
           menu_id: item.id || item.menu_id,
           jumlah: item.qty || 1,
-          // Catatan lu sementara nggak dimasukin sini, kecuali backend lu udah ada kolomnya
+          catatan: item.catatan || "", // Sekalian kita masukin catatan
         })),
       };
 
-      // 2. Tembak API ke Laravel
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
 
       if (response.data.success) {
-        if (typeof setOrderData === "function") setOrderData(response.data.data);
+        // 🔥 INI KUNCI FIX-NYA: Kita gabungin data response backend dengan items dari keranjang!
+        const orderBaru = {
+          ...response.data.data,
+          items: [...cart], // <--- Biar pas keranjang dikosongin, struk ini tetep nyimpen datanya
+        };
+
+        if (typeof setOrderData === "function") setOrderData(orderBaru);
         if (typeof setStrukItems === "function") setStrukItems(cart);
         if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
         if (typeof setTeksMetodeBayarStruk === "function") setTeksMetodeBayarStruk("Midtrans (QRIS / VA)");
 
         const snapToken = response.data.snap_token;
-        const orderBaru = response.data.data; // Kita tangkap data aslinya di sini
 
-        // 3. Panggil Popup Midtrans pake token dari backend
         window.snap.pay(snapToken, {
           onSuccess: function (result) {
             alert("Mantap! Pembayaran berhasil cuy!");
-
-            // 🟢 FIX: Kunci data ke memori browser sebelum Midtrans nge-refresh halaman
+            // Simpan orderBaru yang UDAH ADA items-nya ke memori
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
-
             setView("progress");
           },
           onPending: function (result) {
             alert("Menunggu pembayaran (bisa cek di email atau dashboard)");
-
-            // 🟢 FIX: VA itu statusnya Pending, arahkan juga ke halaman progress biar user bisa pantau
+            // Simpan orderBaru yang UDAH ADA items-nya ke memori
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
-
             setView("progress");
           },
           onError: function (result) {
@@ -112,7 +105,6 @@ export default function CheckoutView({
         <h2 className="text-lg font-semibold text-gray-900 border-l border-gray-300 pl-3">Checkout</h2>
       </div>
 
-      {/* Bagian Ringkasan Pesanan */}
       <motion.div layout className="bg-white p-5 rounded-2xl border border-gray-100 mb-6 shadow-sm">
         <div className="flex justify-between border-b border-gray-100 pb-3 mb-4">
           <span className="font-light text-gray-500 text-sm">Nomor Meja</span>
@@ -156,7 +148,6 @@ export default function CheckoutView({
         </div>
       </motion.div>
 
-      {/* Form Data Pelanggan */}
       <div className="mb-5 flex flex-col gap-3">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -193,7 +184,6 @@ export default function CheckoutView({
         </div>
       </div>
 
-      {/* Tombol Metode Pembayaran manual di-hide, karena Midtrans yg sediain */}
       <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
         <p className="text-sm text-amber-800 font-medium">Pembayaran diurus oleh Midtrans.</p>
         <p className="text-xs text-amber-600 mt-1">Kamu bisa milih QRIS, Virtual Account, atau E-Wallet di halaman selanjutnya.</p>
