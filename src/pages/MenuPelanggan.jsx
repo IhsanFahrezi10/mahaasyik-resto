@@ -328,12 +328,24 @@ export default function MenuPelanggan() {
       confirmButtonText: "Ya, Keluar",
       cancelButtonText: "Batal",
       reverseButtons: true,
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
+        // 🔥 1. SURUH BACKEND BUKA GEMBOK MEJA DULU!
+        try {
+          await axios.post(`${BACKEND_URL}/api/meja/release`, {
+            nomor_meja: nomorMeja,
+          });
+        } catch (err) {
+          console.log("Gagal membuka gembok meja di backend", err);
+        }
+
+        // 2. BARU BERSIHKAN DATA DI HP PELANGGAN
         localStorage.removeItem("mahaasyik_nomor_meja");
         localStorage.removeItem("mahaasyik_last_view");
         localStorage.removeItem("mahaasyik_active_order");
         localStorage.removeItem("mahaasyik_active_cart");
+        // Kita biarin mahaasyik_device_id tetep ada, nggak usah dihapus
+
         window.history.replaceState(null, "", window.location.pathname);
         setNomorMeja("");
         setView("menu");
@@ -351,7 +363,6 @@ export default function MenuPelanggan() {
       }
     });
   };
-
   if (!nomorMeja) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-['Plus_Jakarta_Sans'] text-gray-800">
