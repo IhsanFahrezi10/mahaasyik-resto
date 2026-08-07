@@ -208,9 +208,24 @@ const DashboardKasir = () => {
 
                     <div className="flex justify-between items-center pt-3 border-t border-gray-100">
                       <span className="text-sm font-bold text-gray-800">{order.total}</span>
-                      <button onClick={() => handleUpdateStatus(order.original_id, "Diproses")} className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1.5 px-4 rounded-lg transition-colors shadow-sm">
-                        Proses
-                      </button>
+                      <div className="flex gap-2">
+                        {/* Tombol Batalkan */}
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Yakin mau membatalkan pesanan ${order.id}? Jangan lupa kembalikan uang customer secara manual/cash!`)) {
+                              handleUpdateStatus(order.original_id, "Dibatalkan");
+                            }
+                          }}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm"
+                        >
+                          Batalkan
+                        </button>
+
+                        {/* Tombol Proses Asli */}
+                        <button onClick={() => handleUpdateStatus(order.original_id, "Diproses")} className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1.5 px-4 rounded-lg transition-colors shadow-sm">
+                          Proses
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
