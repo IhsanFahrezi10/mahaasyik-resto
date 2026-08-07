@@ -60,20 +60,29 @@ export default function CheckoutView({
         if (typeof setStrukItems === "function") setStrukItems(cart);
         if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
         if (typeof setTeksMetodeBayarStruk === "function") setTeksMetodeBayarStruk("Midtrans (QRIS / VA)");
+
         const snapToken = response.data.snap_token;
+        const orderBaru = response.data.data; // Kita tangkap data aslinya di sini
 
         // 3. Panggil Popup Midtrans pake token dari backend
         window.snap.pay(snapToken, {
           onSuccess: function (result) {
             alert("Mantap! Pembayaran berhasil cuy!");
 
-            // GANTI BAGIAN INI:
-            // Sesuaikan "progress" dengan nama state yang biasa lu pake buat manggil ProgressView.jsx
+            // 🟢 FIX: Kunci data ke memori browser sebelum Midtrans nge-refresh halaman
+            localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
+            localStorage.setItem("mahaasyik_last_view", "progress");
+
             setView("progress");
           },
           onPending: function (result) {
             alert("Menunggu pembayaran (bisa cek di email atau dashboard)");
-            setView("menu");
+
+            // 🟢 FIX: VA itu statusnya Pending, arahkan juga ke halaman progress biar user bisa pantau
+            localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
+            localStorage.setItem("mahaasyik_last_view", "progress");
+
+            setView("progress");
           },
           onError: function (result) {
             alert("Yah, pembayaran gagal!");
