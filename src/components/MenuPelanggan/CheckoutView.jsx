@@ -49,16 +49,20 @@ export default function CheckoutView({
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
 
       if (response.data.success) {
-        // 🔥 INI KUNCI FIX-NYA: Kita gabungin data response backend dengan items dari keranjang!
+        // 🔥 TRIK SAKTI: Ambil riwayat pesanan lama dari memori (kalau ada)
+        const riwayatPesanan = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || null;
+
+        // Gabungkan daftar makanan lama dengan keranjang yang baru mau dibayar
+        const itemGabungan = riwayatPesanan && riwayatPesanan.items ? [...riwayatPesanan.items, ...cart] : [...cart];
+
+        // Bikin data orderBaru yang ngebawa SEMUA item (lama + baru)
         const orderBaru = {
           ...response.data.data,
-          items: [...cart], // <--- Biar pas keranjang dikosongin, struk ini tetep nyimpen datanya
+          items: itemGabungan, // <--- Struk lu sekarang bakal panjang & lengkap!
         };
 
         if (typeof setOrderData === "function") setOrderData(orderBaru);
-        if (typeof setStrukItems === "function") setStrukItems(cart);
-        if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
-        if (typeof setTeksMetodeBayarStruk === "function") setTeksMetodeBayarStruk("Midtrans (QRIS / VA)");
+        // Catatan: Pemanggilan setStrukItems & setTotalStruk dihapus karena udah dihitung otomatis di MenuPelanggan
 
         const snapToken = response.data.snap_token;
 
