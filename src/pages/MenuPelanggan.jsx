@@ -12,7 +12,7 @@ import CheckoutView from "../components/MenuPelanggan/CheckoutView";
 import ProgressView from "../components/MenuPelanggan/ProgressView";
 import PaymentModal from "../components/MenuPelanggan/PaymentModal";
 
-// 🔥 Konfigurasi Notifikasi Minimalis
+// Konfigurasi Notifikasi Minimalis
 const Toast = Swal.mixin({
   toast: true,
   position: "top",
@@ -82,26 +82,48 @@ export default function MenuPelanggan() {
     if (nomorMeja) fetchMenus();
   }, [nomorMeja, API_URL]);
 
+  // 🔥 UPDATE SAKTI: GLOBAL POLLING (Auto-Refresh di halaman mana pun!)
   useEffect(() => {
     let pollInterval;
-    if (view === "progress" && orderData?.id) {
+    // Syaratnya: Ada ID Pesanan & Status belum final
+    if (orderData?.id && orderData.status !== "Selesai" && orderData.status !== "Dibatalkan") {
       pollInterval = setInterval(async () => {
         try {
           const response = await axios.get(`${API_URL}/orders/${orderData.id}`);
           const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
+          // Kalau ada perubahan status dari backend...
           if (statusTerbaru && statusTerbaru !== orderData.status) {
             const updatedOrder = { ...orderData, status: statusTerbaru, status_pesanan: statusTerbaru };
             setOrderData(updatedOrder);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(updatedOrder));
+
+            // JIKA TIBA-TIBA LUNAS (Skenario Webhook Berhasil)
+            if (statusTerbaru === "Menunggu" || statusTerbaru === "Diproses" || statusTerbaru === "Selesai") {
+              // 1. Kosongkan keranjang (Biar nggak menu-menuhin memori)
+              setCart([]);
+              localStorage.removeItem("mahaasyik_active_cart");
+
+              // 2. Kalau pelanggan masih "nyangkut" di Checkout, TARIK PAKSA ke Progress View!
+              if (view !== "progress") {
+                setView("progress");
+                localStorage.setItem("mahaasyik_last_view", "progress");
+
+                // Kasih tau pelanggan kalau sistem mendeteksi pembayaran
+                Toast.fire({
+                  icon: "success",
+                  title: "Pembayaran Dikonfirmasi Server!",
+                });
+              }
+            }
           }
         } catch (error) {
           console.error("Gagal cek status", error);
         }
-      }, 5000);
+      }, 5000); // Cek tiap 5 detik
     }
     return () => clearInterval(pollInterval);
-  }, [view, orderData, API_URL]);
+  }, [view, orderData, API_URL]); // Hapus 'cart' dari array dependensi biar nggak bentrok
 
   let safeMenus = Array.isArray(menus) ? menus : [];
   let filteredMenus = safeMenus;
@@ -297,12 +319,10 @@ export default function MenuPelanggan() {
   }, [mejaUrl, nomorMeja]);
 
   const handleTambahPesanan = () => {
-    setCart([]);
-    localStorage.removeItem("mahaasyik_active_cart");
     setView("menu");
+    // Hapus baris setCart([]) di sini karena keranjang udah otomatis dibersihkan saat lunas
   };
 
-  // 🔥 Desain Modal Konfirmasi Keluar yang Lebih Minimalis & Estetik
   const handleSelesaiKeluar = () => {
     Swal.fire({
       text: "Akhiri sesi meja ini?",
