@@ -2,16 +2,17 @@ import React from "react";
 import { motion } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
 
-export default function ProgressView({ orderData, namaPelanggan, formatTanggal, teksMetodeBayarStruk, nomorMeja, statusStep, strukItems, totalStruk, handleSelesaiKeluar, handleTambahPesanan }) {
+export default function ProgressView({ orderData, namaPelanggan, formatTanggal, nomorMeja, statusStep, strukItems, totalStruk, handleSelesaiKeluar, handleTambahPesanan }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
+
+  // 🔥 Ambil teks dinamis langsung dari memori yang disimpan CheckoutView
+  const teksMetodeBayarStruk = orderData?.metode_pembayaran_text || orderData?.metode_pembayaran || "Belum Dipilih";
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ duration: 0.3 }} className="p-4 max-w-md mx-auto mt-2 pb-40 print:p-0 print:m-0 print:max-w-none">
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm print:border-none print:shadow-none print:p-0">
-        {/* HEADER STATUS DINAMIS */}
         <div className="flex flex-col items-center mb-6">
           <HeaderLogo variant="utama" className="w-40 mb-2 print:w-32 grayscale print:grayscale" />
-          {/* Support status baru: Menunggu Pembayaran */}
           {orderData.status === "Belum Bayar" || orderData.status === "Menunggu Pembayaran" ? (
             <p className="text-center font-bold text-amber-500 text-sm">Menunggu Pembayaran</p>
           ) : orderData.status === "Dibatalkan" ? (
@@ -25,10 +26,10 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
         <div className="flex justify-between items-start text-xs sm:text-sm border-b border-gray-100 pb-4 mb-5">
           <div className="flex flex-col gap-1.5 text-left">
             <p className="text-gray-500">
-              Metode Pembayaran: <span className="font-medium text-gray-800">{teksMetodeBayarStruk}</span>
+              Metode Bayar: <span className="font-bold text-gray-800">{teksMetodeBayarStruk}</span>
             </p>
             <p className="text-gray-500">
-              Nama Pelanggan: <span className="font-medium text-gray-800">{orderData.nama_pelanggan || namaPelanggan || "-"}</span>
+              Pelanggan: <span className="font-medium text-gray-800">{orderData.nama_pelanggan || namaPelanggan || "-"}</span>
             </p>
           </div>
           <div className="flex flex-col gap-1.5 text-right">
@@ -41,7 +42,6 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
           </div>
         </div>
 
-        {/* LOGIKA TAMPILAN TENGAH (PROGRESS BAR / ERROR BOX) */}
         {orderData.status === "Dibatalkan" ? (
           <div className="mb-8 print:hidden bg-red-50 border border-red-200 p-5 rounded-2xl text-center">
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -51,19 +51,33 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
             </div>
             <h3 className="text-red-600 font-bold text-lg mb-1">Pesanan Dibatalkan</h3>
             <p className="text-red-500 text-xs leading-relaxed">
-              Mohon maaf, pesanan ini dibatalkan oleh kasir.
+              Mohon maaf, pesanan ini dibatalkan.
               <br />
               <br />
-              <span className="font-semibold">Silakan temui kasir untuk pengembalian dana.</span>
+              <span className="font-semibold">Silakan temui kasir.</span>
             </p>
           </div>
         ) : orderData.status === "Belum Bayar" || orderData.status === "Menunggu Pembayaran" ? (
-          <div className="mb-8 print:hidden bg-amber-50 border border-amber-200 p-5 rounded-2xl text-center">
+          <div className="mb-8 print:hidden bg-amber-50 border border-amber-200 p-5 rounded-2xl text-center flex flex-col items-center">
             <h3 className="text-amber-600 font-bold text-lg mb-1">Menunggu Pembayaran</h3>
-            <p className="text-amber-500 text-xs leading-relaxed">Pesanan belum lunas. Selesaikan instruksi pembayaran (VA/QRIS) agar pesanan segera dibuatkan oleh koki.</p>
+            <p className="text-amber-500 text-xs leading-relaxed mb-4">Pesanan belum lunas. Selesaikan instruksi pembayaran agar pesanan segera diproses.</p>
+
+            {/* 🔥 TAMPILIN VA (Kalau dari Transfer Bank) */}
+            {orderData.payment_details && (
+              <div className="bg-white px-4 py-3 rounded-xl border border-amber-200 w-full mb-4 shadow-sm">
+                <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">NOMOR / KODE BAYAR</p>
+                <p className="text-lg font-bold text-gray-800 tracking-widest">{orderData.payment_details}</p>
+              </div>
+            )}
+
+            {/* 🔥 TOMBOL AJAIB BUKA ULANG MIDTRANS BUAT LIHAT QRIS / CARA BAYAR */}
+            {orderData.snap_token && (
+              <button onClick={() => window.snap.pay(orderData.snap_token)} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow-sm">
+                Lihat QRIS / Cara Bayar
+              </button>
+            )}
           </div>
         ) : (
-          /* JIKA STATUS NORMAL / UDAH DIBAYAR */
           <div className="mb-8 print:hidden relative px-4 mt-2">
             <div className="absolute left-0 top-3 w-full h-1 bg-gray-100 rounded-full z-0"></div>
             <motion.div
