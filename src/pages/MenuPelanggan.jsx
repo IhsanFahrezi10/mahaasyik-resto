@@ -68,16 +68,19 @@ export default function MenuPelanggan() {
     if (nomorMeja) fetchMenus();
   }, [nomorMeja, API_URL]);
 
+  // 🔥 INI DIA YANG DIBENERIN BIAR NGGAK AMNESIA
   useEffect(() => {
     let pollInterval;
     if (view === "progress" && orderData?.id) {
       pollInterval = setInterval(async () => {
         try {
           const response = await axios.get(`${API_URL}/orders/${orderData.id}`);
-          const statusTerbaru = response.data?.status;
+
+          // Fix: Baca status_pesanan dari Laravel, bukan status
+          const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
           if (statusTerbaru && statusTerbaru !== orderData.status) {
-            const updatedOrder = { ...orderData, status: statusTerbaru };
+            const updatedOrder = { ...orderData, status: statusTerbaru, status_pesanan: statusTerbaru };
             setOrderData(updatedOrder);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(updatedOrder));
           }
@@ -216,7 +219,6 @@ export default function MenuPelanggan() {
     }
   };
 
-  // 🔥 Fungsi dikembalikan seperti semula, tanpa ngirim deviceId ke backend
   const prosesMasukMeja = async (targetMeja) => {
     setErrorMeja("");
     setIsLoadingMeja(true);
@@ -228,7 +230,6 @@ export default function MenuPelanggan() {
         try {
           await axios.post(`${BACKEND_URL}/api/meja/occupy`, {
             nomor_meja: targetMeja,
-            // device_id DIHAPUS
           });
         } catch (err) {
           console.log("Gagal update meja", err);
@@ -237,8 +238,6 @@ export default function MenuPelanggan() {
         setNomorMeja(targetMeja);
         setView("menu");
       } else if (response.data.status === "active") {
-        // Pengecekan Device ID (Gembok) dihapus total.
-        // Langsung pulihkan sesi siapa saja yang masuk!
         Swal.fire({ title: "Sesi Dipulihkan", text: "Meja ini masih aktif...", icon: "info", timer: 2500, showConfirmButton: false });
 
         const dataOrderDariBackend = response.data.order;
