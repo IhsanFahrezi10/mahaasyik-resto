@@ -2,15 +2,20 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
 import axios from "axios";
-import Swal from "sweetalert2"; // <-- Import Swal buat Toast
+import Swal from "sweetalert2";
 
-// Konfigurasi Notifikasi Minimalis (Toast)
+// 🔥 Konfigurasi Notifikasi Minimalis (Model Toast)
 const Toast = Swal.mixin({
   toast: true,
   position: "top",
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,
+  customClass: {
+    popup: "bg-white rounded-xl shadow-md border border-gray-100 px-4 py-3",
+    title: "text-sm font-medium text-gray-800 m-0",
+    icon: "scale-75 m-0 mr-2",
+  },
 });
 
 export default function CheckoutView({
@@ -48,17 +53,23 @@ export default function CheckoutView({
         nama_pelanggan: namaPelanggan,
         no_hp_pelanggan: noHpPelanggan,
         email_pelanggan: emailPelanggan,
-        items: cart.map((item) => ({ menu_id: item.id || item.menu_id, jumlah: item.qty || 1, catatan: item.catatan || "" })),
+        items: cart.map((item) => ({
+          menu_id: item.id || item.menu_id,
+          jumlah: item.qty || 1,
+          catatan: item.catatan || "",
+        })),
       };
 
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
 
       if (response.data.success) {
-        // Gabungkan pesanan dengan history lama
         const riwayatPesanan = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || null;
         const itemGabungan = riwayatPesanan && riwayatPesanan.items ? [...riwayatPesanan.items, ...cart] : [...cart];
 
-        const orderBaru = { ...response.data.data, items: itemGabungan };
+        const orderBaru = {
+          ...response.data.data,
+          items: itemGabungan,
+        };
 
         if (typeof setOrderData === "function") setOrderData(orderBaru);
         if (typeof setStrukItems === "function") setStrukItems(cart);
@@ -70,7 +81,8 @@ export default function CheckoutView({
         window.snap.pay(snapToken, {
           onSuccess: async function (result) {
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
-            // Update status ke Menunggu biar masuk kasir
+
+            // Ubah status ke Menunggu biar masuk kasir
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
             } catch (e) {}
@@ -79,28 +91,29 @@ export default function CheckoutView({
             orderBaru.status = "Menunggu";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
+
+            // Cuma pindah halaman kalau beneran SUKSES bayar
             setView("progress");
           },
           onPending: function (result) {
-            Toast.fire({ icon: "info", title: "Silakan selesaikan pembayaran." });
-            // Jangan masukin kasir, tetapkan status Belum Bayar
+            Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
+
+            // Simpan data orderan ke memori, TAPI JANGAN pindah halaman!
             orderBaru.status_pesanan = "Belum Bayar";
             orderBaru.status = "Belum Bayar";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
-            localStorage.setItem("mahaasyik_last_view", "progress");
-            setView("progress");
           },
           onError: function (result) {
-            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
+            Toast.fire({ icon: "error", title: "Pembayaran Gagal diproses!" });
           },
           onClose: function () {
-            // Kalau cuma nge-close popup, munculin notif minimalis dan tetep stay di Checkout
-            Toast.fire({ icon: "warning", title: "Selesaikan pembayaran untuk memproses pesanan" });
+            // Pas user klik tombol silang (X), cuma keluarin Toast, JANGAN pindah halaman!
+            Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan." });
           },
         });
       }
     } catch (error) {
-      Toast.fire({ icon: "error", title: "Server sibuk. Coba lagi bentar." });
+      Toast.fire({ icon: "error", title: "Server sibuk. Coba lagi bentar ya." });
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +159,7 @@ export default function CheckoutView({
                 </div>
                 <input
                   type="text"
-                  placeholder="Catatan (opsional): Pedas..."
+                  placeholder="Catatan (opsional): Pedas, tanpa daun bawang..."
                   value={item.catatan || ""}
                   onChange={(e) => handleCatatanChange(item.id || item.menu_id, e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-700 focus:outline-none focus:border-[#D30F25] transition-colors mt-1"
@@ -174,6 +187,26 @@ export default function CheckoutView({
             className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25] focus:ring-1 focus:ring-[#D30F25]"
             required
           />
+        </div>
+        <div className="flex gap-3">
+          <div className="w-1/2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              No. HP <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
+            </label>
+            <input type="tel" value={noHpPelanggan} onChange={(e) => setNoHpPelanggan(e.target.value)} placeholder="08..." className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]" />
+          </div>
+          <div className="w-1/2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
+            </label>
+            <input
+              type="email"
+              value={emailPelanggan}
+              onChange={(e) => setEmailPelanggan(e.target.value)}
+              placeholder="email@..."
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]"
+            />
+          </div>
         </div>
       </div>
 

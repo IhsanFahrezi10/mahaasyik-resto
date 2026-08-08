@@ -12,6 +12,20 @@ import CheckoutView from "../components/MenuPelanggan/CheckoutView";
 import ProgressView from "../components/MenuPelanggan/ProgressView";
 import PaymentModal from "../components/MenuPelanggan/PaymentModal";
 
+// 🔥 Konfigurasi Notifikasi Minimalis
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  customClass: {
+    popup: "bg-white rounded-xl shadow-md border border-gray-100 px-4 py-3",
+    title: "text-sm font-medium text-gray-800 m-0",
+    icon: "scale-75 m-0 mr-2",
+  },
+});
+
 export default function MenuPelanggan() {
   const API_URL = "https://wife-monsieur-gratuity.ngrok-free.dev/api";
   const BACKEND_URL = "https://wife-monsieur-gratuity.ngrok-free.dev";
@@ -68,15 +82,12 @@ export default function MenuPelanggan() {
     if (nomorMeja) fetchMenus();
   }, [nomorMeja, API_URL]);
 
-  // 🔥 INI DIA YANG DIBENERIN BIAR NGGAK AMNESIA
   useEffect(() => {
     let pollInterval;
     if (view === "progress" && orderData?.id) {
       pollInterval = setInterval(async () => {
         try {
           const response = await axios.get(`${API_URL}/orders/${orderData.id}`);
-
-          // Fix: Baca status_pesanan dari Laravel, bukan status
           const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
           if (statusTerbaru && statusTerbaru !== orderData.status) {
@@ -123,7 +134,7 @@ export default function MenuPelanggan() {
 
   const handleTambah = (menu) => {
     if (menu.is_available === 0 || menu.is_available === false) {
-      Swal.fire({ icon: "error", title: "Menu Habis!", text: "Maaf, menu ini sedang tidak tersedia hari ini.", confirmButtonColor: "#D30F25" });
+      Toast.fire({ icon: "error", title: "Maaf, menu ini sedang habis!" });
       return;
     }
     setCart((prev) => {
@@ -167,7 +178,7 @@ export default function MenuPelanggan() {
       interval = setInterval(() => setWaktuBayar((p) => p - 1), 1000);
     } else if (waktuBayar === 0) {
       clearInterval(interval);
-      alert("Waktu habis! Silakan ulangi.");
+      Toast.fire({ icon: "warning", title: "Waktu habis! Silakan ulangi." });
       setIsTimerAktif(false);
       setShowPaymentModal(false);
     }
@@ -189,7 +200,7 @@ export default function MenuPelanggan() {
 
   const handlePembayaranSukses = async () => {
     if (!namaPelanggan.trim()) {
-      Swal.fire({ title: "Tunggu Dulu!", text: "Nama pemesan wajib diisi ya.", icon: "warning", confirmButtonColor: "#D30F25" });
+      Toast.fire({ icon: "warning", title: "Isi nama pemesan dulu ngab!" });
       return;
     }
     try {
@@ -212,10 +223,10 @@ export default function MenuPelanggan() {
       localStorage.setItem("mahaasyik_active_order", JSON.stringify(newOrder));
       setIsTimerAktif(false);
       setShowPaymentModal(false);
-      Swal.fire({ title: "Berhasil!", text: "Pembayaran sukses, pesananmu sedang diproses.", icon: "success", timer: 2000, showConfirmButton: false });
+      Toast.fire({ icon: "success", title: "Pesananmu sedang diproses!" });
       setView("progress");
     } catch (err) {
-      Swal.fire({ title: "Gagal!", text: "Gagal memproses pesanan. Silakan coba lagi.", icon: "error", confirmButtonColor: "#D30F25" });
+      Toast.fire({ icon: "error", title: "Gagal memproses pesanan." });
     }
   };
 
@@ -228,9 +239,7 @@ export default function MenuPelanggan() {
 
       if (response.data.status === "available") {
         try {
-          await axios.post(`${BACKEND_URL}/api/meja/occupy`, {
-            nomor_meja: targetMeja,
-          });
+          await axios.post(`${BACKEND_URL}/api/meja/occupy`, { nomor_meja: targetMeja });
         } catch (err) {
           console.log("Gagal update meja", err);
         }
@@ -238,7 +247,7 @@ export default function MenuPelanggan() {
         setNomorMeja(targetMeja);
         setView("menu");
       } else if (response.data.status === "active") {
-        Swal.fire({ title: "Sesi Dipulihkan", text: "Meja ini masih aktif...", icon: "info", timer: 2500, showConfirmButton: false });
+        Toast.fire({ icon: "info", title: "Memulihkan sesi pesanan..." });
 
         const dataOrderDariBackend = response.data.order;
 
@@ -293,17 +302,24 @@ export default function MenuPelanggan() {
     setView("menu");
   };
 
+  // 🔥 Desain Modal Konfirmasi Keluar yang Lebih Minimalis & Estetik
   const handleSelesaiKeluar = () => {
     Swal.fire({
-      title: "Selesai & Keluar?",
-      text: "Pastikan pesanan sudah selesai. Sesi meja akan diakhiri.",
+      text: "Akhiri sesi meja ini?",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#D30F25",
-      cancelButtonColor: "#9ca3af",
+      cancelButtonColor: "#f3f4f6",
       confirmButtonText: "Ya, Keluar",
-      cancelButtonText: "Batal",
+      cancelButtonText: "<span style='color: #4b5563'>Batal</span>",
       reverseButtons: true,
+      width: "320px",
+      customClass: {
+        popup: "rounded-3xl shadow-xl border border-gray-100 p-4",
+        htmlContainer: "text-sm text-gray-600 font-medium",
+        confirmButton: "rounded-xl text-sm font-semibold px-6 py-2.5",
+        cancelButton: "rounded-xl text-sm font-semibold px-6 py-2.5",
+      },
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem("mahaasyik_nomor_meja");
@@ -323,7 +339,7 @@ export default function MenuPelanggan() {
         setNoHpPelanggan("");
         setMetodeBayar("");
         setInputMeja("");
-        Swal.fire({ title: "Sesi Berakhir", text: "Terima kasih atas kunjungannya!", icon: "success", timer: 1500, showConfirmButton: false });
+        Toast.fire({ icon: "success", title: "Terima kasih atas kunjungannya!" });
       }
     });
   };
