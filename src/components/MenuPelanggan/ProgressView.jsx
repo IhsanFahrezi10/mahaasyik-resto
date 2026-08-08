@@ -11,7 +11,8 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
         {/* HEADER STATUS DINAMIS */}
         <div className="flex flex-col items-center mb-6">
           <HeaderLogo variant="utama" className="w-40 mb-2 print:w-32 grayscale print:grayscale" />
-          {orderData.status === "Belum Bayar" ? (
+          {/* Support status baru: Menunggu Pembayaran */}
+          {orderData.status === "Belum Bayar" || orderData.status === "Menunggu Pembayaran" ? (
             <p className="text-center font-bold text-amber-500 text-sm">Menunggu Pembayaran</p>
           ) : orderData.status === "Dibatalkan" ? (
             <p className="text-center font-bold text-red-500 text-sm">Pesanan Batal</p>
@@ -50,13 +51,13 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
             </div>
             <h3 className="text-red-600 font-bold text-lg mb-1">Pesanan Dibatalkan</h3>
             <p className="text-red-500 text-xs leading-relaxed">
-              Mohon maaf, pesanan ini dibatalkan oleh kasir (kemungkinan stok habis).
+              Mohon maaf, pesanan ini dibatalkan oleh kasir.
               <br />
               <br />
               <span className="font-semibold">Silakan temui kasir untuk pengembalian dana.</span>
             </p>
           </div>
-        ) : orderData.status === "Belum Bayar" ? (
+        ) : orderData.status === "Belum Bayar" || orderData.status === "Menunggu Pembayaran" ? (
           <div className="mb-8 print:hidden bg-amber-50 border border-amber-200 p-5 rounded-2xl text-center">
             <h3 className="text-amber-600 font-bold text-lg mb-1">Menunggu Pembayaran</h3>
             <p className="text-amber-500 text-xs leading-relaxed">Pesanan belum lunas. Selesaikan instruksi pembayaran (VA/QRIS) agar pesanan segera dibuatkan oleh koki.</p>
