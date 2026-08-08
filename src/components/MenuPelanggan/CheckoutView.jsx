@@ -4,7 +4,6 @@ import HeaderLogo from "../HeaderLogo";
 import axios from "axios";
 import Swal from "sweetalert2";
 
-// Konfigurasi Notifikasi Minimalis (Toast)
 const Toast = Swal.mixin({
   toast: true,
   position: "top",
@@ -71,54 +70,56 @@ export default function CheckoutView({
 
         const snapToken = response.data.snap_token;
 
-        // 🔥 FLAG SAKTI UNTUK DETEKSI STATUS KLIK PELANGGAN
-        let isPaymentProcessed = false;
-
         window.snap.pay(snapToken, {
-          // SKENARIO 1: LANGSUNG LUNAS (Misal pakai e-wallet)
           onSuccess: async function (result) {
-            isPaymentProcessed = true;
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
-
-            // Tembak backend buat ubah status jadi Menunggu (Masuk Kasir)
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
             } catch (e) {}
 
             orderBaru.status_pesanan = "Menunggu";
             orderBaru.status = "Menunggu";
+            if (typeof setOrderData === "function") setOrderData(orderBaru); // Wajib dipanggil biar MenuPelanggan update!
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
-
-            // Langsung Pindah Ke Progress View (Tampilan Progress Bar Hijau)
             setView("progress");
           },
-
-          // SKENARIO 2: GENERATE VA/QRIS (Gantung / Belum Bayar)
           onPending: function (result) {
-            isPaymentProcessed = true;
             Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
-            // Tetapkan status Belum Bayar (Nggak masuk Kasir)
-            orderBaru.status_pesanan = "Belum Bayar";
-            orderBaru.status = "Belum Bayar";
+            orderBaru.status_pesanan = "Menunggu Pembayaran";
+            orderBaru.status = "Menunggu Pembayaran";
+            if (typeof setOrderData === "function") setOrderData(orderBaru);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
-
-            // Pindah Ke Progress View (Tampilan Kotak Kuning - Menunggu Pembayaran)
             setView("progress");
           },
-
           onError: function (result) {
             Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
           },
+          // 🔥 MAGIC-NYA DI SINI: Deteksi otomatis pas popup ditutup / Cek Status diklik
+          onClose: async function () {
+            try {
+              // Cek status ke Laravel
+              const res = await axios.get(`${BACKEND_URL}/api/orders/${orderBaru.id}`);
+              const curStatus = res.data?.data?.status_pesanan || res.data?.status_pesanan || res.data?.status;
 
-          // SKENARIO 3: KLIK SILANG (X) PADA POPUP MIDTRANS
-          onClose: function () {
-            // Kalau dia klik silang SEBELUM generate metode bayar (Skenario Batal Beli)
-            if (!isPaymentProcessed) {
-              Toast.fire({ icon: "warning", title: "Pembayaran dibatalkan/ditutup." });
-              // REACT AKAN DIAM SAJA DI HALAMAN CHECKOUT
+              // Kalau ternyata udah Lunas atau udah Generate VA...
+              if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
+                orderBaru.status_pesanan = curStatus;
+                orderBaru.status = curStatus;
+                if (typeof setOrderData === "function") setOrderData(orderBaru);
+                localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
+                localStorage.setItem("mahaasyik_last_view", "progress");
+
+                // Pindah paksa ke Progress View!
+                setView("progress");
+              } else {
+                // Kalau beneran belum ngapa-ngapain, tetap di Checkout
+                Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan/dibatalkan." });
+              }
+            } catch (e) {
+              Toast.fire({ icon: "warning", title: "Pembayaran ditutup." });
             }
           },
         });
