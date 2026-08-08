@@ -2,6 +2,16 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../HeaderLogo";
 import axios from "axios";
+import Swal from "sweetalert2"; // <-- Import Swal buat Toast
+
+// Konfigurasi Notifikasi Minimalis (Toast)
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 export default function CheckoutView({
   setView,
@@ -22,12 +32,11 @@ export default function CheckoutView({
   setTeksMetodeBayarStruk,
 }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
-
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBayarSekarang = async () => {
     if (!namaPelanggan) {
-      alert("Woi, isi nama pemesan dulu ngab!");
+      Toast.fire({ icon: "warning", title: "Isi nama pemesan dulu ngab!" });
       return;
     }
 
@@ -39,59 +48,59 @@ export default function CheckoutView({
         nama_pelanggan: namaPelanggan,
         no_hp_pelanggan: noHpPelanggan,
         email_pelanggan: emailPelanggan,
-        items: cart.map((item) => ({
-          menu_id: item.id || item.menu_id,
-          jumlah: item.qty || 1,
-          catatan: item.catatan || "", // Sekalian kita masukin catatan
-        })),
+        items: cart.map((item) => ({ menu_id: item.id || item.menu_id, jumlah: item.qty || 1, catatan: item.catatan || "" })),
       };
 
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
 
       if (response.data.success) {
-        // 🔥 TRIK SAKTI: Ambil riwayat pesanan lama dari memori (kalau ada)
+        // Gabungkan pesanan dengan history lama
         const riwayatPesanan = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || null;
-
-        // Gabungkan daftar makanan lama dengan keranjang yang baru mau dibayar
         const itemGabungan = riwayatPesanan && riwayatPesanan.items ? [...riwayatPesanan.items, ...cart] : [...cart];
 
-        // Bikin data orderBaru yang ngebawa SEMUA item (lama + baru)
-        const orderBaru = {
-          ...response.data.data,
-          items: itemGabungan, // <--- Struk lu sekarang bakal panjang & lengkap!
-        };
+        const orderBaru = { ...response.data.data, items: itemGabungan };
 
         if (typeof setOrderData === "function") setOrderData(orderBaru);
-        // Catatan: Pemanggilan setStrukItems & setTotalStruk dihapus karena udah dihitung otomatis di MenuPelanggan
+        if (typeof setStrukItems === "function") setStrukItems(cart);
+        if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
+        if (typeof setTeksMetodeBayarStruk === "function") setTeksMetodeBayarStruk("Midtrans (QRIS / VA)");
 
         const snapToken = response.data.snap_token;
 
         window.snap.pay(snapToken, {
-          onSuccess: function (result) {
-            alert("Mantap! Pembayaran berhasil cuy!");
-            // Simpan orderBaru yang UDAH ADA items-nya ke memori
+          onSuccess: async function (result) {
+            Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
+            // Update status ke Menunggu biar masuk kasir
+            try {
+              await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
+            } catch (e) {}
+
+            orderBaru.status_pesanan = "Menunggu";
+            orderBaru.status = "Menunggu";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
           onPending: function (result) {
-            alert("Menunggu pembayaran (bisa cek di email atau dashboard)");
-            // Simpan orderBaru yang UDAH ADA items-nya ke memori
+            Toast.fire({ icon: "info", title: "Silakan selesaikan pembayaran." });
+            // Jangan masukin kasir, tetapkan status Belum Bayar
+            orderBaru.status_pesanan = "Belum Bayar";
+            orderBaru.status = "Belum Bayar";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
           onError: function (result) {
-            alert("Yah, pembayaran gagal!");
+            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
           },
           onClose: function () {
-            alert("Selesaikan pembayaran untuk memproses pesanan ya!");
+            // Kalau cuma nge-close popup, munculin notif minimalis dan tetep stay di Checkout
+            Toast.fire({ icon: "warning", title: "Selesaikan pembayaran untuk memproses pesanan" });
           },
         });
       }
     } catch (error) {
-      console.error("Gagal buat pesanan:", error);
-      alert("Waduh, server lagi ngambek. Coba lagi bentar ya.");
+      Toast.fire({ icon: "error", title: "Server sibuk. Coba lagi bentar." });
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +146,7 @@ export default function CheckoutView({
                 </div>
                 <input
                   type="text"
-                  placeholder="Catatan (opsional): Pedas, tanpa daun bawang..."
+                  placeholder="Catatan (opsional): Pedas..."
                   value={item.catatan || ""}
                   onChange={(e) => handleCatatanChange(item.id || item.menu_id, e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-700 focus:outline-none focus:border-[#D30F25] transition-colors mt-1"
@@ -165,26 +174,6 @@ export default function CheckoutView({
             className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25] focus:ring-1 focus:ring-[#D30F25]"
             required
           />
-        </div>
-        <div className="flex gap-3">
-          <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              No. HP <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
-            </label>
-            <input type="tel" value={noHpPelanggan} onChange={(e) => setNoHpPelanggan(e.target.value)} placeholder="08..." className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]" />
-          </div>
-          <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
-            </label>
-            <input
-              type="email"
-              value={emailPelanggan}
-              onChange={(e) => setEmailPelanggan(e.target.value)}
-              placeholder="email@..."
-              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]"
-            />
-          </div>
         </div>
       </div>
 

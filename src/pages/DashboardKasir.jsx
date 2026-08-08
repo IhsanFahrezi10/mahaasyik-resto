@@ -94,7 +94,7 @@ const DashboardKasir = () => {
     return () => clearInterval(pollingInterval);
   }, []);
 
-  const waitingOrders = orders.filter((o) => o.status === "menunggu" || o.status === "pending");
+  const waitingOrders = orders.filter((o) => o.status === "menunggu");
   const processingOrders = orders.filter((o) => o.status === "diproses");
   const completedOrders = orders.filter((o) => o.status === "selesai" || o.status === "lunas" || o.status === "paid");
 

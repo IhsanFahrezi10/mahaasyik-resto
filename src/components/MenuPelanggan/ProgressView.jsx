@@ -8,9 +8,16 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ duration: 0.3 }} className="p-4 max-w-md mx-auto mt-2 pb-40 print:p-0 print:m-0 print:max-w-none">
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm print:border-none print:shadow-none print:p-0">
+        {/* HEADER STATUS DINAMIS */}
         <div className="flex flex-col items-center mb-6">
           <HeaderLogo variant="utama" className="w-40 mb-2 print:w-32 grayscale print:grayscale" />
-          <p className="text-center font-medium text-gray-600 text-sm">Pembayaran Berhasil</p>
+          {orderData.status === "Belum Bayar" ? (
+            <p className="text-center font-bold text-amber-500 text-sm">Menunggu Pembayaran</p>
+          ) : orderData.status === "Dibatalkan" ? (
+            <p className="text-center font-bold text-red-500 text-sm">Pesanan Batal</p>
+          ) : (
+            <p className="text-center font-medium text-gray-600 text-sm">Pembayaran Berhasil</p>
+          )}
           <p className="text-center text-gray-400 text-xs mt-1">{formatTanggal(orderData.created_at || new Date().toISOString())}</p>
         </div>
 
@@ -33,6 +40,7 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
           </div>
         </div>
 
+        {/* LOGIKA TAMPILAN TENGAH (PROGRESS BAR / ERROR BOX) */}
         {orderData.status === "Dibatalkan" ? (
           <div className="mb-8 print:hidden bg-red-50 border border-red-200 p-5 rounded-2xl text-center">
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -45,11 +53,16 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
               Mohon maaf, pesanan ini dibatalkan oleh kasir (kemungkinan stok habis).
               <br />
               <br />
-              <span className="font-semibold">Silakan temui kasir untuk pengembalian dana (refund).</span>
+              <span className="font-semibold">Silakan temui kasir untuk pengembalian dana.</span>
             </p>
           </div>
+        ) : orderData.status === "Belum Bayar" ? (
+          <div className="mb-8 print:hidden bg-amber-50 border border-amber-200 p-5 rounded-2xl text-center">
+            <h3 className="text-amber-600 font-bold text-lg mb-1">Menunggu Pembayaran</h3>
+            <p className="text-amber-500 text-xs leading-relaxed">Pesanan belum lunas. Selesaikan instruksi pembayaran (VA/QRIS) agar pesanan segera dibuatkan oleh koki.</p>
+          </div>
         ) : (
-          /* JIKA STATUS NORMAL (PROGRESS BAR LAMA) */
+          /* JIKA STATUS NORMAL / UDAH DIBAYAR */
           <div className="mb-8 print:hidden relative px-4 mt-2">
             <div className="absolute left-0 top-3 w-full h-1 bg-gray-100 rounded-full z-0"></div>
             <motion.div
@@ -101,7 +114,7 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
 
         <div className="flex flex-col gap-3 mt-2">
           <div className="flex justify-between items-center border-t border-gray-100 pt-4">
-            <span className="font-semibold text-gray-800 text-sm tracking-wider">TOTAL LUNAS</span>
+            <span className="font-semibold text-gray-800 text-sm tracking-wider">TOTAL TAGIHAN</span>
             <span className="text-lg font-bold text-[#D30F25]">Rp {totalStruk.toLocaleString()}</span>
           </div>
         </div>
@@ -113,8 +126,6 @@ export default function ProgressView({ orderData, namaPelanggan, formatTanggal, 
             <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.print()} className="w-1/3 bg-white text-gray-800 p-3.5 rounded-xl font-medium text-sm border border-gray-200 shadow-sm">
               Cetak Struk
             </motion.button>
-
-            {/* 👇 Ini tombol baru buat nambah pesanan */}
             <motion.button whileTap={{ scale: 0.95 }} onClick={handleTambahPesanan} className="w-2/3 bg-white text-amber-600 border border-amber-200 p-3.5 rounded-xl font-medium text-sm shadow-sm">
               + Pesan Menu Lain
             </motion.button>
