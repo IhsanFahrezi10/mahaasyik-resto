@@ -4,7 +4,7 @@ import HeaderLogo from "../HeaderLogo";
 import axios from "axios";
 import Swal from "sweetalert2";
 
-// 🔥 Konfigurasi Notifikasi Minimalis (Model Toast)
+// Konfigurasi Notifikasi Minimalis (Toast)
 const Toast = Swal.mixin({
   toast: true,
   position: "top",
@@ -53,11 +53,7 @@ export default function CheckoutView({
         nama_pelanggan: namaPelanggan,
         no_hp_pelanggan: noHpPelanggan,
         email_pelanggan: emailPelanggan,
-        items: cart.map((item) => ({
-          menu_id: item.id || item.menu_id,
-          jumlah: item.qty || 1,
-          catatan: item.catatan || "",
-        })),
+        items: cart.map((item) => ({ menu_id: item.id || item.menu_id, jumlah: item.qty || 1, catatan: item.catatan || "" })),
       };
 
       const response = await axios.post(`${BACKEND_URL}/api/orders`, dataPesanan);
@@ -66,10 +62,7 @@ export default function CheckoutView({
         const riwayatPesanan = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || null;
         const itemGabungan = riwayatPesanan && riwayatPesanan.items ? [...riwayatPesanan.items, ...cart] : [...cart];
 
-        const orderBaru = {
-          ...response.data.data,
-          items: itemGabungan,
-        };
+        const orderBaru = { ...response.data.data, items: itemGabungan };
 
         if (typeof setOrderData === "function") setOrderData(orderBaru);
         if (typeof setStrukItems === "function") setStrukItems(cart);
@@ -78,11 +71,16 @@ export default function CheckoutView({
 
         const snapToken = response.data.snap_token;
 
+        // 🔥 FLAG SAKTI UNTUK DETEKSI STATUS KLIK PELANGGAN
+        let isPaymentProcessed = false;
+
         window.snap.pay(snapToken, {
+          // SKENARIO 1: LANGSUNG LUNAS (Misal pakai e-wallet)
           onSuccess: async function (result) {
+            isPaymentProcessed = true;
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
 
-            // Ubah status ke Menunggu biar masuk kasir
+            // Tembak backend buat ubah status jadi Menunggu (Masuk Kasir)
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
             } catch (e) {}
@@ -92,23 +90,36 @@ export default function CheckoutView({
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
 
-            // Cuma pindah halaman kalau beneran SUKSES bayar
+            // Langsung Pindah Ke Progress View (Tampilan Progress Bar Hijau)
             setView("progress");
           },
+
+          // SKENARIO 2: GENERATE VA/QRIS (Gantung / Belum Bayar)
           onPending: function (result) {
+            isPaymentProcessed = true;
             Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
-            // Simpan data orderan ke memori, TAPI JANGAN pindah halaman!
+            // Tetapkan status Belum Bayar (Nggak masuk Kasir)
             orderBaru.status_pesanan = "Belum Bayar";
             orderBaru.status = "Belum Bayar";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
+            localStorage.setItem("mahaasyik_last_view", "progress");
+
+            // Pindah Ke Progress View (Tampilan Kotak Kuning - Menunggu Pembayaran)
+            setView("progress");
           },
+
           onError: function (result) {
-            Toast.fire({ icon: "error", title: "Pembayaran Gagal diproses!" });
+            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
           },
+
+          // SKENARIO 3: KLIK SILANG (X) PADA POPUP MIDTRANS
           onClose: function () {
-            // Pas user klik tombol silang (X), cuma keluarin Toast, JANGAN pindah halaman!
-            Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan." });
+            // Kalau dia klik silang SEBELUM generate metode bayar (Skenario Batal Beli)
+            if (!isPaymentProcessed) {
+              Toast.fire({ icon: "warning", title: "Pembayaran dibatalkan/ditutup." });
+              // REACT AKAN DIAM SAJA DI HALAMAN CHECKOUT
+            }
           },
         });
       }
