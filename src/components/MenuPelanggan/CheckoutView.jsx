@@ -65,8 +65,6 @@ export default function CheckoutView({
         const snapToken = response.data.snap_token;
         orderBaru.snap_token = snapToken;
 
-        // 🔥 SET ORDER DATA DIHAPUS DARI SINI BIAR AUTO-REFRESH NGGAK NYALIP!
-
         let isPaymentProcessed = false;
 
         const extractPaymentInfo = (result) => {
@@ -106,11 +104,12 @@ export default function CheckoutView({
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
+            orderBaru.metode_pembayaran = info.payType; // Sinkron ke DB juga
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
 
-            // 🔥 UPDATE KE LARAVEL (Sekarang ngirim metode bayar juga!)
+            // Lapor metode pembayaran lunas ke Laravel
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu",
@@ -121,9 +120,7 @@ export default function CheckoutView({
             orderBaru.status_pesanan = "Menunggu";
             orderBaru.status = "Menunggu";
 
-            // ... sisa kodingan onSuccess lu
-
-            // 🔥 BARU KITA SIMPAN DATANYA SETELAH PASTI SUKSES
+            // 👇 INI PERINTAH PEMINDAH HALAMAN YANG KEMAREN ILANG
             if (typeof setOrderData === "function") setOrderData(orderBaru);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
@@ -131,15 +128,15 @@ export default function CheckoutView({
           },
 
           onPending: async function (result) {
-            // <-- Tambahin async di sini
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
+            orderBaru.metode_pembayaran = info.payType; // Sinkron ke DB juga
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
-            // 🔥 UPDATE KE LARAVEL BUAT YANG PENDING JUGA!
+            // Lapor metode pembayaran tertunda ke Laravel
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu Pembayaran",
@@ -150,8 +147,7 @@ export default function CheckoutView({
             orderBaru.status_pesanan = "Menunggu Pembayaran";
             orderBaru.status = "Menunggu Pembayaran";
 
-            // ... sisa kodingan onPending lu
-
+            // 👇 INI PERINTAH PEMINDAH HALAMAN YANG KEMAREN ILANG
             if (typeof setOrderData === "function") setOrderData(orderBaru);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
@@ -171,7 +167,6 @@ export default function CheckoutView({
                 if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
                   orderBaru.status_pesanan = curStatus;
                   orderBaru.status = curStatus;
-                  // Beri nilai aman kalau Midtrans sempet ketutup
                   if (!orderBaru.metode_pembayaran_text) orderBaru.metode_pembayaran_text = "Pembayaran Online";
 
                   if (typeof setOrderData === "function") setOrderData(orderBaru);
