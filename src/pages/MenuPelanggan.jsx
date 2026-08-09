@@ -287,7 +287,19 @@ export default function MenuPelanggan() {
           return { id: item.menu_id, name: item.menu?.name || item.menu?.nama_menu || `Menu #${item.menu_id}`, qty: Number(item.jumlah) || 1, price: hargaValid, catatan: item.catatan || "" };
         });
 
-        const activeOrder = { ...dataOrderDariBackend, status: dataOrderDariBackend?.status_pesanan || "Menunggu", metode_pembayaran: dataOrderDariBackend?.metode_pembayaran || "qris", items: restoredCart };
+        // 🔥 TRIK AMAN: Ambil data token dan metode bayar dari memori HP pelanggan (kalau ada)
+        const memoriLama = JSON.parse(localStorage.getItem("mahaasyik_active_order"));
+        const isPesananSama = memoriLama && memoriLama.id === dataOrderDariBackend.id;
+
+        const activeOrder = {
+          ...dataOrderDariBackend,
+          status: dataOrderDariBackend?.status_pesanan || "Menunggu",
+          // Tetap simpan riwayat token & metode bayar kalau itu pesanan yang sama
+          metode_pembayaran_text: isPesananSama ? memoriLama.metode_pembayaran_text : dataOrderDariBackend?.metode_pembayaran || "-",
+          payment_details: isPesananSama ? memoriLama.payment_details : null,
+          snap_token: isPesananSama ? memoriLama.snap_token : null,
+          items: restoredCart,
+        };
 
         setOrderData(activeOrder);
         setCart(restoredCart);
