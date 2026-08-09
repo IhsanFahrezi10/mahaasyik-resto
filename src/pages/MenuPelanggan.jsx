@@ -81,6 +81,7 @@ export default function MenuPelanggan() {
   }, [nomorMeja, API_URL]);
 
   // 🔥 AUTO REFRESH SUPER CERDAS (Fix Stuck Checkout)
+  // 🔥 AUTO REFRESH SUPER CERDAS (Fix Update Metode Pembayaran)
   useEffect(() => {
     let pollInterval;
     if (orderData?.id && orderData.status !== "Selesai" && orderData.status !== "Dibatalkan") {
@@ -89,31 +90,31 @@ export default function MenuPelanggan() {
           const response = await axios.get(`${API_URL}/orders/${orderData.id}`);
           const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
-          if (statusTerbaru && statusTerbaru !== orderData.status) {
-            const metodeBaru = response.data?.data?.metode_pembayaran || response.data?.metode_pembayaran;
+          // Tangkap metode bayar dari Laravel
+          const metodeBaru = response.data?.data?.metode_pembayaran || response.data?.metode_pembayaran;
+
+          // 🔥 KUNCI UTAMA: Update jalan kalau status beda ATAU metode bayar baru masuk!
+          if ((statusTerbaru && statusTerbaru !== orderData.status) || (metodeBaru && metodeBaru !== orderData.metode_pembayaran_text)) {
             const updatedOrder = {
               ...orderData,
-              status: statusTerbaru,
-              status_pesanan: statusTerbaru,
+              status: statusTerbaru || orderData.status,
+              status_pesanan: statusTerbaru || orderData.status_pesanan,
               metode_pembayaran_text: metodeBaru || orderData.metode_pembayaran_text,
+              metode_pembayaran: metodeBaru || orderData.metode_pembayaran,
             };
 
             setOrderData(updatedOrder);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(updatedOrder));
 
-            // 🔥 INI DIA KUNCI FIX-NYA: Masukin "Menunggu Pembayaran" biar dia pindah halaman!
             if (["Menunggu", "Diproses", "Selesai", "Menunggu Pembayaran"].includes(statusTerbaru)) {
-              // Keranjang cuma dihapus kalau udah LUNAS
               if (statusTerbaru !== "Menunggu Pembayaran") {
                 setCart([]);
                 localStorage.removeItem("mahaasyik_active_cart");
               }
 
-              // TARIK PAKSA KE PROGRESS VIEW
               if (view !== "progress") {
                 setView("progress");
                 localStorage.setItem("mahaasyik_last_view", "progress");
-
                 if (statusTerbaru !== "Menunggu Pembayaran") {
                   Toast.fire({ icon: "success", title: "Pembayaran Dikonfirmasi Server!" });
                 }

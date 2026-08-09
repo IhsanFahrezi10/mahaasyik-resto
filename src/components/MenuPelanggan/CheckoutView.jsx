@@ -160,12 +160,22 @@ export default function CheckoutView({
           onClose: async function () {
             if (!isPaymentProcessed) {
               try {
+                // 1. Nanya ke Laravel
                 const res = await axios.get(`${BACKEND_URL}/api/orders/${orderBaru.id}`);
                 const curStatus = res.data?.data?.status_pesanan || res.data?.status_pesanan || res.data?.status;
+
+                // 🔥 2. AMBIL JUGA METODE PEMBAYARANNYA DARI LARAVEL!
+                const curMetode = res.data?.data?.metode_pembayaran || res.data?.metode_pembayaran;
 
                 if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
                   orderBaru.status_pesanan = curStatus;
                   orderBaru.status = curStatus;
+
+                  // 🔥 3. MASUKIN KE ORDER DATA BIAR REACT TAU
+                  if (curMetode) {
+                    orderBaru.metode_pembayaran = curMetode;
+                    orderBaru.metode_pembayaran_text = curMetode;
+                  }
 
                   if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
                   localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
