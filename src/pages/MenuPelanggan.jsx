@@ -12,7 +12,6 @@ import CheckoutView from "../components/MenuPelanggan/CheckoutView";
 import ProgressView from "../components/MenuPelanggan/ProgressView";
 import PaymentModal from "../components/MenuPelanggan/PaymentModal";
 
-// Konfigurasi Notifikasi Minimalis
 const Toast = Swal.mixin({
   toast: true,
   position: "top",
@@ -82,7 +81,6 @@ export default function MenuPelanggan() {
     if (nomorMeja) fetchMenus();
   }, [nomorMeja, API_URL]);
 
-  // Global Polling (Auto-Refresh)
   useEffect(() => {
     let pollInterval;
     if (orderData?.id && orderData.status !== "Selesai" && orderData.status !== "Dibatalkan") {
@@ -92,8 +90,15 @@ export default function MenuPelanggan() {
           const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
           if (statusTerbaru && statusTerbaru !== orderData.status) {
-            // ...orderData akan mempertahankan metode_pembayaran_text yang udah dicatet CheckoutView
-            const updatedOrder = { ...orderData, status: statusTerbaru, status_pesanan: statusTerbaru };
+            // 🔥 Ambil juga metode bayar kalau ada perubahan
+            const metodeBaru = response.data?.data?.metode_pembayaran || response.data?.metode_pembayaran;
+            const updatedOrder = {
+              ...orderData,
+              status: statusTerbaru,
+              status_pesanan: statusTerbaru,
+              metode_pembayaran_text: metodeBaru || orderData.metode_pembayaran_text,
+            };
+
             setOrderData(updatedOrder);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(updatedOrder));
 
@@ -281,11 +286,11 @@ export default function MenuPelanggan() {
         const memoriLama = JSON.parse(localStorage.getItem("mahaasyik_active_order"));
         const isPesananSama = memoriLama && memoriLama.id === dataOrderDariBackend.id;
 
-        // 🔥 FIX KASUS 2: Kalau dipulihkan dari HP lain, kasih fallback "QRIS / Transfer Bank"
+        // 🔥 FIX KASUS 2: BACA METODE DARI DATABASE LARAVEL!
         const activeOrder = {
           ...dataOrderDariBackend,
           status: dataOrderDariBackend?.status_pesanan || "Menunggu",
-          metode_pembayaran_text: isPesananSama && memoriLama?.metode_pembayaran_text ? memoriLama.metode_pembayaran_text : "QRIS / Transfer Bank",
+          metode_pembayaran_text: dataOrderDariBackend?.metode_pembayaran || (isPesananSama && memoriLama?.metode_pembayaran_text ? memoriLama.metode_pembayaran_text : "Pembayaran Online"),
           payment_details: isPesananSama ? memoriLama.payment_details : null,
           snap_token: isPesananSama ? memoriLama.snap_token : null,
           items: restoredCart,
@@ -398,8 +403,7 @@ export default function MenuPelanggan() {
   const strukItems = Array.isArray(orderData?.items) && orderData.items.length > 0 ? orderData.items : Array.isArray(cart) ? cart : [];
   const totalStruk = strukItems.reduce((total, item) => total + Number(item.price || 0) * (item.qty || 1), 0);
 
-  // 🔥 FIX KASUS 1: Ini baris utama yang kemaren bikin error "Belum Terpilih"
-  const teksMetodeBayarStruk = orderData?.metode_pembayaran_text || orderData?.metode_pembayaran || "QRIS / Transfer Bank";
+  const teksMetodeBayarStruk = orderData?.metode_pembayaran_text || orderData?.metode_pembayaran || "Pembayaran Online";
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-['Plus_Jakarta_Sans'] print:pb-0 relative overflow-hidden">

@@ -65,6 +65,9 @@ export default function CheckoutView({
         const snapToken = response.data.snap_token;
         orderBaru.snap_token = snapToken;
 
+        // 🔥 WAJIB DISIMPAN DI AWAL BIAR NGGAK BLANK SCREEN PAS PINDAH HALAMAN!
+        if (typeof setOrderData === "function") setOrderData(orderBaru);
+
         let isPaymentProcessed = false;
 
         const extractPaymentInfo = (result) => {
@@ -104,12 +107,11 @@ export default function CheckoutView({
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
-            orderBaru.metode_pembayaran = info.payType; // Sinkron ke DB juga
+            orderBaru.metode_pembayaran = info.payType;
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
 
-            // Lapor metode pembayaran lunas ke Laravel
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu",
@@ -120,8 +122,8 @@ export default function CheckoutView({
             orderBaru.status_pesanan = "Menunggu";
             orderBaru.status = "Menunggu";
 
-            // 👇 INI PERINTAH PEMINDAH HALAMAN YANG KEMAREN ILANG
-            if (typeof setOrderData === "function") setOrderData(orderBaru);
+            // 🔥 UPDATE PAKSA REACT BIAR TEKS BERUBAH
+            if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
@@ -131,12 +133,11 @@ export default function CheckoutView({
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
-            orderBaru.metode_pembayaran = info.payType; // Sinkron ke DB juga
+            orderBaru.metode_pembayaran = info.payType;
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
-            // Lapor metode pembayaran tertunda ke Laravel
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu Pembayaran",
@@ -147,8 +148,8 @@ export default function CheckoutView({
             orderBaru.status_pesanan = "Menunggu Pembayaran";
             orderBaru.status = "Menunggu Pembayaran";
 
-            // 👇 INI PERINTAH PEMINDAH HALAMAN YANG KEMAREN ILANG
-            if (typeof setOrderData === "function") setOrderData(orderBaru);
+            // 🔥 UPDATE PAKSA REACT BIAR TEKS BERUBAH
+            if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
@@ -167,9 +168,8 @@ export default function CheckoutView({
                 if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
                   orderBaru.status_pesanan = curStatus;
                   orderBaru.status = curStatus;
-                  if (!orderBaru.metode_pembayaran_text) orderBaru.metode_pembayaran_text = "Pembayaran Online";
 
-                  if (typeof setOrderData === "function") setOrderData(orderBaru);
+                  if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
                   localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
                   localStorage.setItem("mahaasyik_last_view", "progress");
                   setView("progress");
