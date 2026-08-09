@@ -107,22 +107,21 @@ export default function CheckoutView({
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
-            orderBaru.metode_pembayaran = info.payType;
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
 
+            // 🔥 PASTIKAN AXIOS NGIRIM METODE BAYAR JUGA!
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu",
-                metode_pembayaran: info.payType,
+                metode_pembayaran: info.payType, // <-- INI YANG BIKIN DB NGGAK NULL
               });
             } catch (e) {}
 
             orderBaru.status_pesanan = "Menunggu";
             orderBaru.status = "Menunggu";
 
-            // 🔥 UPDATE PAKSA REACT BIAR TEKS BERUBAH
             if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
@@ -133,22 +132,21 @@ export default function CheckoutView({
             isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
-            orderBaru.metode_pembayaran = info.payType;
             orderBaru.payment_details = info.payDetails;
 
             Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
+            // 🔥 PASTIKAN AXIOS NGIRIM METODE BAYAR JUGA!
             try {
               await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
                 status_pesanan: "Menunggu Pembayaran",
-                metode_pembayaran: info.payType,
+                metode_pembayaran: info.payType, // <-- INI YANG BIKIN DB NGGAK NULL
               });
             } catch (e) {}
 
             orderBaru.status_pesanan = "Menunggu Pembayaran";
             orderBaru.status = "Menunggu Pembayaran";
 
-            // 🔥 UPDATE PAKSA REACT BIAR TEKS BERUBAH
             if (typeof setOrderData === "function") setOrderData({ ...orderBaru });
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
