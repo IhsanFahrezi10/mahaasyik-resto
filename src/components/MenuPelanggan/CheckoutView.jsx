@@ -6,29 +6,41 @@ import Swal from "sweetalert2";
 
 const Toast = Swal.mixin({
   toast: true,
-  position: 'top',
+  position: "top",
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,
   customClass: {
-    popup: 'bg-white rounded-xl shadow-md border border-gray-100 px-4 py-3',
-    title: 'text-sm font-medium text-gray-800 m-0',
-    icon: 'scale-75 m-0 mr-2'
-  }
+    popup: "bg-white rounded-xl shadow-md border border-gray-100 px-4 py-3",
+    title: "text-sm font-medium text-gray-800 m-0",
+    icon: "scale-75 m-0 mr-2",
+  },
 });
 
 export default function CheckoutView({
-  setView, nomorMeja, cart, BACKEND_URL, handleCatatanChange, totalHarga, 
-  namaPelanggan, setNamaPelanggan, noHpPelanggan, setNoHpPelanggan, 
-  emailPelanggan, setEmailPelanggan, setOrderData, setStrukItems, 
-  setTotalStruk, setTeksMetodeBayarStruk,
+  setView,
+  nomorMeja,
+  cart,
+  BACKEND_URL,
+  handleCatatanChange,
+  totalHarga,
+  namaPelanggan,
+  setNamaPelanggan,
+  noHpPelanggan,
+  setNoHpPelanggan,
+  emailPelanggan,
+  setEmailPelanggan,
+  setOrderData,
+  setStrukItems,
+  setTotalStruk,
+  setTeksMetodeBayarStruk,
 }) {
   const pageVariants = { initial: { opacity: 0, x: 20 }, in: { opacity: 1, x: 0 }, out: { opacity: 0, x: -20 } };
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBayarSekarang = async () => {
     if (!namaPelanggan) {
-      Toast.fire({ icon: 'warning', title: 'Isi nama pemesan dulu ngab!' });
+      Toast.fire({ icon: "warning", title: "Isi nama pemesan dulu ngab!" });
       return;
     }
 
@@ -36,7 +48,10 @@ export default function CheckoutView({
 
     try {
       const dataPesanan = {
-        nomor_meja: nomorMeja, nama_pelanggan: namaPelanggan, no_hp_pelanggan: noHpPelanggan, email_pelanggan: emailPelanggan,
+        nomor_meja: nomorMeja,
+        nama_pelanggan: namaPelanggan,
+        no_hp_pelanggan: noHpPelanggan,
+        email_pelanggan: emailPelanggan,
         items: cart.map((item) => ({ menu_id: item.id || item.menu_id, jumlah: item.qty || 1, catatan: item.catatan || "" })),
       };
 
@@ -44,7 +59,7 @@ export default function CheckoutView({
 
       if (response.data.success) {
         const riwayatPesanan = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || null;
-        const itemGabungan = (riwayatPesanan && riwayatPesanan.items) ? [...riwayatPesanan.items, ...cart] : [...cart];
+        const itemGabungan = riwayatPesanan && riwayatPesanan.items ? [...riwayatPesanan.items, ...cart] : [...cart];
 
         const orderBaru = { ...response.data.data, items: itemGabungan };
         const snapToken = response.data.snap_token;
@@ -54,97 +69,107 @@ export default function CheckoutView({
         if (typeof setStrukItems === "function") setStrukItems(cart);
         if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
 
-        let isPaymentProcessed = false; 
+        let isPaymentProcessed = false;
 
         // Fungsi bantuan ekstrak data dari Midtrans
         const extractPaymentInfo = (result) => {
-            let payType = result.payment_type === 'bank_transfer' ? 'Transfer Bank' :
-                          result.payment_type === 'qris' ? 'QRIS' :
-                          result.payment_type === 'echannel' ? 'Mandiri Bill' :
-                          result.payment_type === 'cstore' ? 'Minimarket' :
-                          result.payment_type === 'gopay' ? 'GoPay' :
-                          result.payment_type === 'shopeepay' ? 'ShopeePay' : result.payment_type;
+          let payType =
+            result.payment_type === "bank_transfer"
+              ? "Transfer Bank"
+              : result.payment_type === "qris"
+                ? "QRIS"
+                : result.payment_type === "echannel"
+                  ? "Mandiri Bill"
+                  : result.payment_type === "cstore"
+                    ? "Minimarket"
+                    : result.payment_type === "gopay"
+                      ? "GoPay"
+                      : result.payment_type === "shopeepay"
+                        ? "ShopeePay"
+                        : result.payment_type;
 
-            let payDetails = "";
-            if (result.va_numbers && result.va_numbers.length > 0) {
-                payDetails = `${result.va_numbers[0].bank.toUpperCase()} VA: ${result.va_numbers[0].va_number}`;
-            } else if (result.bca_va_number) {
-                payDetails = `BCA VA: ${result.bca_va_number}`;
-            } else if (result.permata_va_number) {
-                payDetails = `Permata VA: ${result.permata_va_number}`;
-            } else if (result.bill_key && result.biller_code) {
-                payDetails = `Kode: ${result.biller_code} - ${result.bill_key}`;
-            } else if (result.payment_code) {
-                payDetails = `Kode Bayar: ${result.payment_code}`;
-            }
+          let payDetails = "";
+          if (result.va_numbers && result.va_numbers.length > 0) {
+            payDetails = `${result.va_numbers[0].bank.toUpperCase()} VA: ${result.va_numbers[0].va_number}`;
+          } else if (result.bca_va_number) {
+            payDetails = `BCA VA: ${result.bca_va_number}`;
+          } else if (result.permata_va_number) {
+            payDetails = `Permata VA: ${result.permata_va_number}`;
+          } else if (result.bill_key && result.biller_code) {
+            payDetails = `Kode: ${result.biller_code} - ${result.bill_key}`;
+          } else if (result.payment_code) {
+            payDetails = `Kode Bayar: ${result.payment_code}`;
+          }
 
-            return { payType, payDetails };
+          return { payType, payDetails };
         };
 
         window.snap.pay(snapToken, {
           onSuccess: async function (result) {
-            isPaymentProcessed = true; 
+            isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: 'success', title: 'Pembayaran Berhasil!' });
-            try { await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: 'Menunggu' }); } catch(e) {}
-            
-            orderBaru.status_pesanan = 'Menunggu';
-            orderBaru.status = 'Menunggu';
+            Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
+            try {
+              await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
+            } catch (e) {}
+
+            orderBaru.status_pesanan = "Menunggu";
+            orderBaru.status = "Menunggu";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-          
+
           onPending: function (result) {
-            isPaymentProcessed = true; 
+            isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: 'info', title: 'Selesaikan instruksi pembayaran.' });
-            
-            orderBaru.status_pesanan = 'Menunggu Pembayaran';
-            orderBaru.status = 'Menunggu Pembayaran';
+            Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
+
+            orderBaru.status_pesanan = "Menunggu Pembayaran";
+            orderBaru.status = "Menunggu Pembayaran";
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-          
+
           onError: function (result) {
-            Toast.fire({ icon: 'error', title: 'Pembayaran Gagal!' });
+            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
           },
-          
+
           onClose: async function () {
             if (!isPaymentProcessed) {
               try {
                 const res = await axios.get(`${BACKEND_URL}/api/orders/${orderBaru.id}`);
                 const curStatus = res.data?.data?.status_pesanan || res.data?.status_pesanan || res.data?.status;
                 const orderDiMemori = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || orderBaru;
-  
-                if (curStatus === 'Menunggu Pembayaran' || curStatus === 'Menunggu' || curStatus === 'Diproses') {
-                   orderDiMemori.status_pesanan = curStatus;
-                   orderDiMemori.status = curStatus;
-                   if(!orderDiMemori.snap_token) orderDiMemori.snap_token = snapToken;
-                   
-                   if (typeof setOrderData === "function") setOrderData(orderDiMemori);
-                   localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderDiMemori));
-                   localStorage.setItem("mahaasyik_last_view", "progress");
-                   setView("progress");
+
+                if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
+                  orderDiMemori.status_pesanan = curStatus;
+                  orderDiMemori.status = curStatus;
+                  if (!orderDiMemori.snap_token) orderDiMemori.snap_token = snapToken;
+
+                  if (typeof setOrderData === "function") setOrderData(orderDiMemori);
+                  localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderDiMemori));
+                  localStorage.setItem("mahaasyik_last_view", "progress");
+                  setView("progress");
                 } else {
-                   Toast.fire({ icon: 'warning', title: 'Pembayaran belum diselesaikan/dibatalkan.' });
+                  Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan/dibatalkan." });
                 }
               } catch (e) {
-                 Toast.fire({ icon: 'warning', title: 'Pembayaran ditutup.' });
+                Toast.fire({ icon: "warning", title: "Pembayaran ditutup." });
               }
             }
           },
         });
       }
     } catch (error) {
-      Toast.fire({ icon: 'error', title: 'Server sibuk. Coba lagi bentar ya.' });
+      Toast.fire({ icon: "error", title: "Server sibuk. Coba lagi bentar ya." });
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +179,9 @@ export default function CheckoutView({
     <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" transition={{ duration: 0.3 }} className="p-4 print:hidden max-w-md mx-auto min-h-screen pb-28">
       <div className="flex items-center gap-3 mb-6">
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => setView("menu")} className="bg-white border border-gray-200 p-2 rounded-full text-gray-600 active:bg-gray-50">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
         </motion.button>
         <HeaderLogo variant="alternatif" />
         <h2 className="text-lg font-semibold text-gray-900 border-l border-gray-300 pl-3">Checkout</h2>
@@ -168,16 +195,31 @@ export default function CheckoutView({
         <div className="space-y-4">
           <AnimatePresence>
             {cart.map((item, idx) => (
-              <motion.div key={item.id || item.menu_id || idx} layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.9 }} className="flex flex-col gap-2 border-b border-gray-50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+              <motion.div
+                key={item.id || item.menu_id || idx}
+                layout
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex flex-col gap-2 border-b border-gray-50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0"
+              >
                 <div className="flex gap-3 items-center">
                   <img src={item.foto ? `${BACKEND_URL}/storage/${item.foto}` : "https://via.placeholder.com/300"} alt={item.name || item.nama_menu} className="w-14 h-14 rounded-lg object-cover border border-gray-100 bg-gray-50" />
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-800 text-sm leading-snug">{item.name || item.nama_menu}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">Rp {Number(item.price || 0).toLocaleString()} <span className="font-medium text-gray-800 ml-1">x{item.qty || 1}</span></p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Rp {Number(item.price || 0).toLocaleString()} <span className="font-medium text-gray-800 ml-1">x{item.qty || 1}</span>
+                    </p>
                   </div>
                   <span className="font-medium text-gray-900 text-sm">Rp {(Number(item.price || 0) * (item.qty || 1)).toLocaleString()}</span>
                 </div>
-                <input type="text" placeholder="Catatan (opsional): Pedas..." value={item.catatan || ""} onChange={(e) => handleCatatanChange(item.id || item.menu_id, e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-700 focus:outline-none focus:border-[#D30F25] transition-colors mt-1" />
+                <input
+                  type="text"
+                  placeholder="Catatan (opsional): Pedas..."
+                  value={item.catatan || ""}
+                  onChange={(e) => handleCatatanChange(item.id || item.menu_id, e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-xs text-gray-700 focus:outline-none focus:border-[#D30F25] transition-colors mt-1"
+                />
               </motion.div>
             ))}
           </AnimatePresence>
@@ -190,23 +232,47 @@ export default function CheckoutView({
 
       <div className="mb-5 flex flex-col gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nama Pemesan <span className="text-[#D30F25]">*</span></label>
-          <input type="text" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} placeholder="Masukkan nama kamu..." className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25] focus:ring-1 focus:ring-[#D30F25]" required />
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Nama Pemesan <span className="text-[#D30F25]">*</span>
+          </label>
+          <input
+            type="text"
+            value={namaPelanggan}
+            onChange={(e) => setNamaPelanggan(e.target.value)}
+            placeholder="Masukkan nama kamu..."
+            className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25] focus:ring-1 focus:ring-[#D30F25]"
+            required
+          />
         </div>
         <div className="flex gap-3">
           <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">No. HP <span className="text-gray-400 text-xs font-normal">(Opsional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              No. HP <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
+            </label>
             <input type="tel" value={noHpPelanggan} onChange={(e) => setNoHpPelanggan(e.target.value)} placeholder="08..." className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]" />
           </div>
           <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 text-xs font-normal">(Opsional)</span></label>
-            <input type="email" value={emailPelanggan} onChange={(e) => setEmailPelanggan(e.target.value)} placeholder="email@..." className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-gray-400 text-xs font-normal">(Opsional)</span>
+            </label>
+            <input
+              type="email"
+              value={emailPelanggan}
+              onChange={(e) => setEmailPelanggan(e.target.value)}
+              placeholder="email@..."
+              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-[#D30F25]"
+            />
           </div>
         </div>
       </div>
 
       <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-30">
-        <motion.button whileTap={namaPelanggan && !isLoading ? { scale: 0.95 } : {}} onClick={handleBayarSekarang} disabled={!namaPelanggan || isLoading} className={`w-full max-w-md mx-auto p-3.5 rounded-xl font-medium text-sm flex justify-center items-center transition-all ${namaPelanggan && !isLoading ? "bg-gradient-to-r from-[#D30F25] to-[#FFEC01] text-white shadow-md active:opacity-90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+        <motion.button
+          whileTap={namaPelanggan && !isLoading ? { scale: 0.95 } : {}}
+          onClick={handleBayarSekarang}
+          disabled={!namaPelanggan || isLoading}
+          className={`w-full max-w-md mx-auto p-3.5 rounded-xl font-medium text-sm flex justify-center items-center transition-all ${namaPelanggan && !isLoading ? "bg-gradient-to-r from-[#D30F25] to-[#FFEC01] text-white shadow-md active:opacity-90" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+        >
           {isLoading ? "Memproses..." : "Lanjutkan Pembayaran"}
         </motion.button>
       </motion.div>
