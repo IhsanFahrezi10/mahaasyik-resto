@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import HeaderLogo from "../components/HeaderLogo";
 axios.defaults.headers.common["ngrok-skip-browser-warning"] = "69420";
 
-// Import komponen pecahan
 import MenuView from "../components/MenuPelanggan/MenuView";
 import CheckoutView from "../components/MenuPelanggan/CheckoutView";
 import ProgressView from "../components/MenuPelanggan/ProgressView";
@@ -81,6 +80,7 @@ export default function MenuPelanggan() {
     if (nomorMeja) fetchMenus();
   }, [nomorMeja, API_URL]);
 
+  // 🔥 AUTO REFRESH SUPER CERDAS (Fix Stuck Checkout)
   useEffect(() => {
     let pollInterval;
     if (orderData?.id && orderData.status !== "Selesai" && orderData.status !== "Dibatalkan") {
@@ -90,7 +90,6 @@ export default function MenuPelanggan() {
           const statusTerbaru = response.data?.data?.status_pesanan || response.data?.status_pesanan || response.data?.status;
 
           if (statusTerbaru && statusTerbaru !== orderData.status) {
-            // 🔥 Ambil juga metode bayar kalau ada perubahan
             const metodeBaru = response.data?.data?.metode_pembayaran || response.data?.metode_pembayaran;
             const updatedOrder = {
               ...orderData,
@@ -102,14 +101,22 @@ export default function MenuPelanggan() {
             setOrderData(updatedOrder);
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(updatedOrder));
 
-            if (statusTerbaru === "Menunggu" || statusTerbaru === "Diproses" || statusTerbaru === "Selesai") {
-              setCart([]);
-              localStorage.removeItem("mahaasyik_active_cart");
+            // 🔥 INI DIA KUNCI FIX-NYA: Masukin "Menunggu Pembayaran" biar dia pindah halaman!
+            if (["Menunggu", "Diproses", "Selesai", "Menunggu Pembayaran"].includes(statusTerbaru)) {
+              // Keranjang cuma dihapus kalau udah LUNAS
+              if (statusTerbaru !== "Menunggu Pembayaran") {
+                setCart([]);
+                localStorage.removeItem("mahaasyik_active_cart");
+              }
 
+              // TARIK PAKSA KE PROGRESS VIEW
               if (view !== "progress") {
                 setView("progress");
                 localStorage.setItem("mahaasyik_last_view", "progress");
-                Toast.fire({ icon: "success", title: "Pembayaran Dikonfirmasi Server!" });
+
+                if (statusTerbaru !== "Menunggu Pembayaran") {
+                  Toast.fire({ icon: "success", title: "Pembayaran Dikonfirmasi Server!" });
+                }
               }
             }
           }
@@ -286,7 +293,6 @@ export default function MenuPelanggan() {
         const memoriLama = JSON.parse(localStorage.getItem("mahaasyik_active_order"));
         const isPesananSama = memoriLama && memoriLama.id === dataOrderDariBackend.id;
 
-        // 🔥 FIX KASUS 2: BACA METODE DARI DATABASE LARAVEL!
         const activeOrder = {
           ...dataOrderDariBackend,
           status: dataOrderDariBackend?.status_pesanan || "Menunggu",
