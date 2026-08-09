@@ -104,65 +104,73 @@ export default function CheckoutView({
           return { payType, payDetails };
         };
 
-        window.snap.pay(snapToken, {
+window.snap.pay(snapToken, {
           onSuccess: async function (result) {
-            isPaymentProcessed = true;
+            isPaymentProcessed = true; 
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
-            try {
-              await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: "Menunggu" });
-            } catch (e) {}
+            Toast.fire({ icon: 'success', title: 'Pembayaran Berhasil!' });
+            try { await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: 'Menunggu' }); } catch(e) {}
+            
+            orderBaru.status_pesanan = 'Menunggu';
+            orderBaru.status = 'Menunggu';
 
-            orderBaru.status_pesanan = "Menunggu";
-            orderBaru.status = "Menunggu";
+            // 🔥 INI DIA BARIS SAKTI YANG KETINGGALAN
+            if (typeof setOrderData === "function") setOrderData(orderBaru);
+
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-
+          
           onPending: function (result) {
-            isPaymentProcessed = true;
+            isPaymentProcessed = true; 
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
+            Toast.fire({ icon: 'info', title: 'Selesaikan instruksi pembayaran.' });
+            
+            orderBaru.status_pesanan = 'Menunggu Pembayaran';
+            orderBaru.status = 'Menunggu Pembayaran';
 
-            orderBaru.status_pesanan = "Menunggu Pembayaran";
-            orderBaru.status = "Menunggu Pembayaran";
+            // 🔥 INI JUGA WAJIB DITAMBAHIN
+            if (typeof setOrderData === "function") setOrderData(orderBaru);
+
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-
+          
           onError: function (result) {
-            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
+            Toast.fire({ icon: 'error', title: 'Pembayaran Gagal!' });
           },
-
+          
           onClose: async function () {
             if (!isPaymentProcessed) {
               try {
                 const res = await axios.get(`${BACKEND_URL}/api/orders/${orderBaru.id}`);
                 const curStatus = res.data?.data?.status_pesanan || res.data?.status_pesanan || res.data?.status;
                 const orderDiMemori = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || orderBaru;
-
-                if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
-                  orderDiMemori.status_pesanan = curStatus;
-                  orderDiMemori.status = curStatus;
-                  if (!orderDiMemori.snap_token) orderDiMemori.snap_token = snapToken;
-
-                  if (typeof setOrderData === "function") setOrderData(orderDiMemori);
-                  localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderDiMemori));
-                  localStorage.setItem("mahaasyik_last_view", "progress");
-                  setView("progress");
+  
+                if (curStatus === 'Menunggu Pembayaran' || curStatus === 'Menunggu' || curStatus === 'Diproses') {
+                   orderDiMemori.status_pesanan = curStatus;
+                   orderDiMemori.status = curStatus;
+                   if(!orderDiMemori.snap_token) orderDiMemori.snap_token = snapToken;
+                   
+                   // Yang di onClose ini kemaren udah aman
+                   if (typeof setOrderData === "function") setOrderData(orderDiMemori);
+                   
+                   localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderDiMemori));
+                   localStorage.setItem("mahaasyik_last_view", "progress");
+                   setView("progress");
                 } else {
-                  Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan/dibatalkan." });
+                   Toast.fire({ icon: 'warning', title: 'Pembayaran belum diselesaikan/dibatalkan.' });
                 }
               } catch (e) {
-                Toast.fire({ icon: "warning", title: "Pembayaran ditutup." });
+                 Toast.fire({ icon: 'warning', title: 'Pembayaran ditutup.' });
               }
             }
           },
