@@ -63,15 +63,12 @@ export default function CheckoutView({
 
         const orderBaru = { ...response.data.data, items: itemGabungan };
         const snapToken = response.data.snap_token;
-        orderBaru.snap_token = snapToken; // 🔥 Simpan token buat buka ulang popup!
+        orderBaru.snap_token = snapToken;
 
-        if (typeof setOrderData === "function") setOrderData(orderBaru);
-        if (typeof setStrukItems === "function") setStrukItems(cart);
-        if (typeof setTotalStruk === "function") setTotalStruk(totalHarga);
+        // 🔥 SET ORDER DATA DIHAPUS DARI SINI BIAR AUTO-REFRESH NGGAK NYALIP!
 
         let isPaymentProcessed = false;
 
-        // Fungsi bantuan ekstrak data dari Midtrans
         const extractPaymentInfo = (result) => {
           let payType =
             result.payment_type === "bank_transfer"
@@ -104,73 +101,88 @@ export default function CheckoutView({
           return { payType, payDetails };
         };
 
-window.snap.pay(snapToken, {
+        window.snap.pay(snapToken, {
           onSuccess: async function (result) {
-            isPaymentProcessed = true; 
+            isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: 'success', title: 'Pembayaran Berhasil!' });
-            try { await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, { status_pesanan: 'Menunggu' }); } catch(e) {}
-            
-            orderBaru.status_pesanan = 'Menunggu';
-            orderBaru.status = 'Menunggu';
+            Toast.fire({ icon: "success", title: "Pembayaran Berhasil!" });
 
-            // 🔥 INI DIA BARIS SAKTI YANG KETINGGALAN
+            // 🔥 UPDATE KE LARAVEL (Sekarang ngirim metode bayar juga!)
+            try {
+              await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
+                status_pesanan: "Menunggu",
+                metode_pembayaran: info.payType,
+              });
+            } catch (e) {}
+
+            orderBaru.status_pesanan = "Menunggu";
+            orderBaru.status = "Menunggu";
+
+            // ... sisa kodingan onSuccess lu
+
+            // 🔥 BARU KITA SIMPAN DATANYA SETELAH PASTI SUKSES
             if (typeof setOrderData === "function") setOrderData(orderBaru);
-
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-          
-          onPending: function (result) {
-            isPaymentProcessed = true; 
+
+          onPending: async function (result) {
+            // <-- Tambahin async di sini
+            isPaymentProcessed = true;
             const info = extractPaymentInfo(result);
             orderBaru.metode_pembayaran_text = info.payType;
             orderBaru.payment_details = info.payDetails;
 
-            Toast.fire({ icon: 'info', title: 'Selesaikan instruksi pembayaran.' });
-            
-            orderBaru.status_pesanan = 'Menunggu Pembayaran';
-            orderBaru.status = 'Menunggu Pembayaran';
+            Toast.fire({ icon: "info", title: "Selesaikan instruksi pembayaran." });
 
-            // 🔥 INI JUGA WAJIB DITAMBAHIN
+            // 🔥 UPDATE KE LARAVEL BUAT YANG PENDING JUGA!
+            try {
+              await axios.put(`${BACKEND_URL}/api/orders/${orderBaru.id}/status`, {
+                status_pesanan: "Menunggu Pembayaran",
+                metode_pembayaran: info.payType,
+              });
+            } catch (e) {}
+
+            orderBaru.status_pesanan = "Menunggu Pembayaran";
+            orderBaru.status = "Menunggu Pembayaran";
+
+            // ... sisa kodingan onPending lu
+
             if (typeof setOrderData === "function") setOrderData(orderBaru);
-
             localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
             localStorage.setItem("mahaasyik_last_view", "progress");
             setView("progress");
           },
-          
+
           onError: function (result) {
-            Toast.fire({ icon: 'error', title: 'Pembayaran Gagal!' });
+            Toast.fire({ icon: "error", title: "Pembayaran Gagal!" });
           },
-          
+
           onClose: async function () {
             if (!isPaymentProcessed) {
               try {
                 const res = await axios.get(`${BACKEND_URL}/api/orders/${orderBaru.id}`);
                 const curStatus = res.data?.data?.status_pesanan || res.data?.status_pesanan || res.data?.status;
-                const orderDiMemori = JSON.parse(localStorage.getItem("mahaasyik_active_order")) || orderBaru;
-  
-                if (curStatus === 'Menunggu Pembayaran' || curStatus === 'Menunggu' || curStatus === 'Diproses') {
-                   orderDiMemori.status_pesanan = curStatus;
-                   orderDiMemori.status = curStatus;
-                   if(!orderDiMemori.snap_token) orderDiMemori.snap_token = snapToken;
-                   
-                   // Yang di onClose ini kemaren udah aman
-                   if (typeof setOrderData === "function") setOrderData(orderDiMemori);
-                   
-                   localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderDiMemori));
-                   localStorage.setItem("mahaasyik_last_view", "progress");
-                   setView("progress");
+
+                if (curStatus === "Menunggu Pembayaran" || curStatus === "Menunggu" || curStatus === "Diproses") {
+                  orderBaru.status_pesanan = curStatus;
+                  orderBaru.status = curStatus;
+                  // Beri nilai aman kalau Midtrans sempet ketutup
+                  if (!orderBaru.metode_pembayaran_text) orderBaru.metode_pembayaran_text = "Pembayaran Online";
+
+                  if (typeof setOrderData === "function") setOrderData(orderBaru);
+                  localStorage.setItem("mahaasyik_active_order", JSON.stringify(orderBaru));
+                  localStorage.setItem("mahaasyik_last_view", "progress");
+                  setView("progress");
                 } else {
-                   Toast.fire({ icon: 'warning', title: 'Pembayaran belum diselesaikan/dibatalkan.' });
+                  Toast.fire({ icon: "warning", title: "Pembayaran belum diselesaikan/dibatalkan." });
                 }
               } catch (e) {
-                 Toast.fire({ icon: 'warning', title: 'Pembayaran ditutup.' });
+                Toast.fire({ icon: "warning", title: "Pembayaran ditutup." });
               }
             }
           },
